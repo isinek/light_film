@@ -1,4 +1,5 @@
 import sys
+
 from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QTabWidget
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout
 from PyQt5.QtWidgets import QLabel, QLineEdit, QComboBox, QPushButton, QAction
@@ -89,8 +90,6 @@ class ProjectHelperApp(QMainWindow):
 
         self.initProjectStructureUI()
 
-        self.show()
-
     def initProjectStructureUI(self):
         # Set layout
         layout = QHBoxLayout()
@@ -154,6 +153,10 @@ class ProjectHelperApp(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+
     window = ProjectHelperApp()
+    window.show()
+    window.raise_()
+
     sys.exit(app.exec_())
 
