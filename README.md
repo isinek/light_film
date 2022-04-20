@@ -59,3 +59,11 @@
 	* ~~Google sheet~~
 	* ~~script~~
 	* python app
+
+## Working hours
+| Description	| Current	| Expected	|
+|---------------|-----------|-----------|
+| Meetings		| 	 4 h	| 	10 h	|
+| POC			| 	 5 h	| 	 5 h	|
+| Development	| 	11 h	| 	25 h	|
+| Documentation	| 	 2 h	| 	 2 h	|

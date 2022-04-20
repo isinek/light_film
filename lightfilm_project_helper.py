@@ -1,8 +1,9 @@
 import sys
+from os.path import exists
 
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QTabWidget
+from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QTabWidget, QFileDialog
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout
-from PyQt5.QtWidgets import QLabel, QLineEdit, QComboBox, QPushButton, QAction
+from PyQt5.QtWidgets import QLabel, QLineEdit, QComboBox, QPushButton, QAction, QListWidget, QListWidgetItem
 from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtCore import Qt
 
@@ -66,42 +67,185 @@ class ProjectHelperApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.title = 'LightFilm Project Helper'
-        self.dimensions = {
-            'window': {
-                'top': 100,
-                'left': 100,
-                'height': 480,
-                'width': 1200
-            }, 'borders': {
-                'top': 10,
-                'label_top': 13,
-                'left': 180,
-                'label_left': 15
-            }, 'row_height': 30
-        }
         self.helper = None
         self.tabs = QTabWidget()
         self.ui = {
-            'project_structure': {}
+            'project_structure': {},
+            'move_project': {},
+            'config': {}
+        }
+        self.config_path = './main.cfg'
+        self.config = {
+            'project_type': {'label': 'Project type:',   'options': []},
+            'asset_type':   {'label': 'Asset type:',     'options': []}
         }
 
         self.setWindowTitle(self.title)
         self.setCentralWidget(self.tabs)
 
+        # Init UI
         self.initProjectStructureUI()
+        self.initMoveProjectUI()
+        self.initConfigUI()
+
+        # Load config
+        self.loadConfigFile()
+
+    def loadConfigFile(self):
+        # Check if config file exists
+        if not exists(self.config_path):
+            with open(self.config_path, 'w') as config_file:
+                config_file.write("project_type:" + ','.join(['Social_Media', 'TV']) + "\n")
+                config_file.write("asset_type:" + ','.join(['1x1_Newsfeed', '4x5_Newsfeed', '9x16_Vertical']) + "\n")
+        with open(self.config_path, 'r') as config_file:
+            for line in config_file:
+                line = line.replace("\n", '')
+                id, options = line.split(':')
+                self.config[id]['options'] = sorted(options.split(','))
+        self.refreshLists()
+
+    def saveConfigFile(self):
+        with open(self.config_path, 'w') as config_file:
+            for c in self.config:
+                config_file.write(f"{c}:{','.join(self.config[c]['options'])}\n")
+
+    def openFileDialog(self):
+        directory = QFileDialog.getExistingDirectory(self, 'Project root', '')
+        if directory:
+            self.ui['move_project']['project_root_dir'].setText(directory)
+
+    def initMoveProjectUI(self):
+        # Set layout
+        layout = QVBoxLayout()
+        top_layout = QHBoxLayout()
+
+        # Label
+        label = QLabel()
+        label.setText('Project root path:')
+        top_layout.addWidget(label)
+
+        # Textbox with root path value
+        textbox = QLineEdit()
+        top_layout.addWidget(textbox)
+        self.ui['move_project']['project_root_dir'] = textbox
+
+        # File dialog button
+        button = QPushButton('Search...')
+        button.clicked.connect(self.openFileDialog)
+        top_layout.addWidget(button)
+
+        layout.addLayout(top_layout)
+        layout.addStretch()
+
+        # Add new tab
+        widget = QWidget()
+        widget.setLayout(layout)
+        self.tabs.addTab(widget, 'Move Project')
+
+    def refreshLists(self):
+        # Clear and fill again all combo boxes and lists
+        for c in self.config:
+            for tab in self.ui:
+                if c in self.ui[tab] and isinstance(self.ui[tab][c], QComboBox):
+                    self.ui[tab][c].clear()
+                    self.ui[tab][c].addItems(self.config[c]['options'])
+                elif c in self.ui[tab] and isinstance(self.ui[tab][c], QListWidget):
+                    self.ui[tab][c].clear()
+                    for item in self.config[c]['options']:
+                        self.ui[tab][c].addItem(QListWidgetItem(item))
+
+    def initConfigUI(self):
+        # Set layout
+        layout = QGridLayout()
+
+        for i, item in enumerate(self.config):
+            # Label
+            label = QLabel()
+            label.setText(self.config[item]['label'])
+            label.setAlignment(Qt.AlignTop)
+            layout.addWidget(label, i, 0)
+
+            # Empty list
+            options = QListWidget()
+            layout.addWidget(options, i, 1)
+            self.ui['config'][item] = options
+
+            input_layout = QVBoxLayout()
+
+            # Textbox for adding options
+            inp = QLineEdit()
+            input_layout.addWidget(inp)
+            self.ui['config'][item + '_textbox'] = inp
+
+            # Add option button
+            add = QPushButton('Add item')
+            add.clicked.connect(self.addListItem)
+            input_layout.addWidget(add)
+            self.ui['config'][item + '_add_button'] = add
+
+            # Remove selected option
+            remove = QPushButton('Remove item')
+            remove.clicked.connect(self.removeListItem)
+            input_layout.addWidget(remove)
+            self.ui['config'][item + '_remove_button'] = remove
+
+            # Add stretch to bottom to move everything to top
+            input_layout.addStretch()
+            layout.addLayout(input_layout, i, 2)
+
+        # Save configuration button
+        save = QPushButton('Save configuration')
+        save.clicked.connect(self.saveConfigFile)
+        layout.addWidget(save, len(self.config), 2)
+
+        # Add new tab
+        widget = QWidget()
+        widget.setLayout(layout)
+        self.tabs.addTab(widget, 'Configuration')
+
+    def addListItem(self):
+        for btn_id in self.ui['config']:
+            # Find clicked button
+            if not self.ui['config'][btn_id] is self.sender():
+                continue
+            textbox_id = btn_id.replace('add_button', 'textbox')
+            list_id = btn_id.replace('_add_button', '')
+            if len(self.ui['config'][textbox_id].text()):
+                # Add new item to config
+                self.config[list_id]['options'] = sorted(self.config[list_id]['options'] + [self.ui['config'][textbox_id].text()])
+            break
+        self.refreshLists()
+
+    def removeListItem(self):
+        for btn_id in self.ui['config']:
+            # Find clicked button
+            if not self.ui['config'][btn_id] is self.sender():
+                continue
+            textbox_id = btn_id.replace('remove_button', 'textbox')
+            list_id = btn_id.replace('_remove_button', '')
+            selected = self.ui['config'][list_id].selectedItems()
+            for item in selected:
+                # Set textbox value to removed item
+                self.ui['config'][textbox_id].setText(item.text())
+                # Remove selected item
+                self.config[list_id]['options'].remove(item.text())
+            break
+        self.refreshLists()
 
     def initProjectStructureUI(self):
         # Set layout
         layout = QHBoxLayout()
         left_layout = QGridLayout()
         right_layout = QVBoxLayout()
+        right_layout.setContentsMargins(5, 10, 5, 10)
 
+        # Define all input fields
         inputs = [
             {'label': 'Project name:',  'id': 'project_name',   'widget': QLineEdit},
             {'label': 'Project code:',  'id': 'project_code',   'widget': QLineEdit},
-            {'label': 'Project type:',  'id': 'project_type',   'widget': QComboBox, 'options': ['Social_Media', 'TV']},
+            {'label': 'Project type:',  'id': 'project_type',   'widget': QComboBox},
             {'label': 'Asset name:',    'id': 'asset_name',     'widget': QLineEdit},
-            {'label': 'Asset type:',    'id': 'asset_type',     'widget': QComboBox, 'options': ['1x1_Newsfeed', '4x5_Newsfeed', '9x16_Vertical']},
+            {'label': 'Asset type:',    'id': 'asset_type',     'widget': QComboBox},
             {'label': 'Dimensions/video length:', 'id': 'dimensions_length', 'widget': QLineEdit},
             {'label': 'Variation:',     'id': 'variation',      'widget': QLineEdit},
             {'label': 'Market and language:', 'id': 'market_language', 'widget': QLineEdit, 'default': 'OV-en-OV'},
@@ -110,21 +254,21 @@ class ProjectHelperApp(QMainWindow):
         ]
 
         for i, item in enumerate(inputs):
+            # label
             label = QLabel()
             label.setText(item['label'])
             left_layout.addWidget(label, i, 0)
 
+            # Textbox or combo box
             inp = item['widget']()
             if item['widget'] is QLineEdit and 'default' in item:
                 inp.setText(item['default'])
-            elif item['widget'] is QComboBox:
-                inp.addItems(item['options'])
-
             self.ui['project_structure'][item['id']] = inp
             left_layout.addWidget(inp, i, 1)
 
         # Generate filenames button
         button = QPushButton('Generate filenames')
+        button.setDefault(True)
         button.clicked.connect(self.getProjectStructure)
         left_layout.addWidget(button, len(inputs), 0, 1, 2)
 
@@ -146,7 +290,18 @@ class ProjectHelperApp(QMainWindow):
         widget.setLayout(layout)
         self.tabs.addTab(widget, 'Project Structure')
 
+    def validateProjectStructureFields(self):
+        for item in self.ui['project_structure']:
+            # If any textbox is empty return False
+            if isinstance(self.ui['project_structure'][item], QLineEdit) and \
+                        not len(self.ui['project_structure'][item].text()):
+                return False
+        return True
+
     def getProjectStructure(self):
+        if not self.validateProjectStructureFields():
+            return
+
         self.helper = ProjectHelper(self)
         self.helper.getStructure()
 
