@@ -3,6 +3,8 @@
  * Generate directory tree of project
  * Generate filenames
  * Optimize project workflow
+
+## Additional requirements
  * Copy/rename project
  * Generate CSV file to check if everything is exported corectly
 
@@ -65,5 +67,5 @@
 |---------------|-----------|-----------|
 | Meetings		| 	 4 h	| 	10 h	|
 | POC			| 	 5 h	| 	 5 h	|
-| Development	| 	11 h	| 	25 h	|
+| Development	| 	28 h	| 	25 h	|
 | Documentation	| 	 2 h	| 	 2 h	|

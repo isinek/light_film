@@ -1,86 +1,263 @@
+from distutils.log import ERROR, INFO
 import sys
+from os import mkdir, rename, replace
 from os.path import exists
+from glob import glob
+from re import match, search
+import pickle
 
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QTabWidget, QFileDialog
-from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout
-from PyQt5.QtWidgets import QLabel, QLineEdit, QComboBox, QPushButton, QAction, QListWidget, QListWidgetItem
-from PyQt5.QtGui import QIcon, QFont
+from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QTabWidget, QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QScrollArea
+from PyQt5.QtWidgets import QLabel, QLineEdit, QComboBox, QPushButton, QListWidget, QListWidgetItem
 from PyQt5.QtCore import Qt
 
 
 class ProjectHelper():
-    def __init__(self, helperApp):
-        self.helperApp = helperApp
-        self.data = {}
-        self.data['project_name'] = helperApp.ui['project_structure']['project_name'].text()
-        self.data['project_code'] = helperApp.ui['project_structure']['project_code'].text().upper()
-        self.data['project_type'] = helperApp.ui['project_structure']['project_type'].currentText()
-        self.data['asset_name'] = helperApp.ui['project_structure']['asset_name'].text()
-        self.data['asset_type'] = helperApp.ui['project_structure']['asset_type'].currentText()
-        self.data['dimensions_length'] = helperApp.ui['project_structure']['dimensions_length'].text()
-        self.data['variation'] = helperApp.ui['project_structure']['variation'].text()
-        self.data['market_language'] = helperApp.ui['project_structure']['market_language'].text()
-        self.data['resolution'] = helperApp.ui['project_structure']['resolution'].text()
-        self.data['frame_rate'] = helperApp.ui['project_structure']['frame_rate'].text()
+    def __init__(self):
+        self.config_path = './main.cfg'
+        self.config = {
+            'project_type': {'label': 'Project type:',  'options': []},
+            'asset_type':   {'label': 'Asset type:',    'options': []},
+            'dimensions_length': {'label': 'Dimensions/video length:',    'options': []},
+            'variation':    {'label': 'Variation:',     'options': []},
+            'resolution':   {'label': 'Resolution:',    'options': []},
+            'frame_rate':   {'label': 'Frame rate:',    'options': []}
+        }
 
-    def getStructure(self):
-        spacer = "   "
-        frame_rate = self.data['frame_rate'].replace('.', '')
-        names = [
-            self.data['project_name'].upper(),
-            'FINALS',
-            f"{self.data['project_code']}_{self.data['dimensions_length']}",
-            f"{self.data['project_code']}_{self.data['dimensions_length']}_{self.data['asset_name']}",
-            f"{self.data['project_code']}_{self.data['project_type']}_{self.data['dimensions_length']}_{self.data['asset_name']}",
-            f"{self.data['project_code']}_{self.data['asset_type']}_{self.data['dimensions_length']}_{self.data['asset_name']}",
+        self.default_project_data = {
+            'finals_dir': 'FINALS',
+            'audio_splits_dir': 'Audio_splits',
+            'dia_scripts_dir': 'Dia_scripts',
+            'gfx_project_dir': 'GFX_Project',
+            'ref_file_dir': 'Ref_File'
+        }
 
-            # ProRes files
-            f"{self.data['frame_rate']}fps",
-            f"{self.data['project_code']}_{self.data['asset_type']}_{self.data['asset_name']}_{self.data['dimensions_length']}_{self.data['variation']}_{self.data['market_language']}-TXTD_{self.data['resolution']}_{frame_rate}_ProRes.mov",
-            f"{self.data['project_code']}_{self.data['asset_type']}_{self.data['asset_name']}_{self.data['dimensions_length']}_{self.data['variation']}_{self.data['market_language']}-TXTL_{self.data['resolution']}_{frame_rate}_ProRes.mov",
+        self.project_structure = {
+            "{project_name}": {
+                "{finals_dir}": {
+                    "{project_code}_{dimensions_length}": {
+                        "{project_code}_{dimensions_length}_{asset_name}": {
+                            "{project_code}_{project_type}_{dimensions_length}_{asset_name}": {
+                                "{project_code}_{asset_type}_{dimensions_length}_{asset_name}": {
+                                    "{frame_rate}fps": [
+                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_{frame_rate_short}_ProRes.mov",
+                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTL_{resolution}_{frame_rate_short}_ProRes.mov"
+                                    ],
+                                    "{audio_splits_dir}": [
+                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Dials-1dBTP.wav",
+                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_FX-1dBTP.wav",
+                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Mix-1dBTP.wav",
+                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Music-1dBTP.wav",
+                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Narr-1dBTP.wav"
+                                    ],
+                                    "{dia_scripts_dir}": [
+                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_Dia_Script.doc"
+                                    ],
+                                    "{gfx_project_dir}": [],
+                                    "{ref_file_dir}": [
+                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_{frame_rate_short}_H264.mov"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
-            # Audio splits
-            'Audio_Splits',
-            f"{self.data['project_code']}_{self.data['asset_type']}_{self.data['asset_name']}_{self.data['dimensions_length']}_{self.data['market_language']}_{frame_rate}_ST_Dials-1dBTP.wav",
-            f"{self.data['project_code']}_{self.data['asset_type']}_{self.data['asset_name']}_{self.data['dimensions_length']}_{self.data['market_language']}_{frame_rate}_ST_FX-1dBTP.wav",
-            f"{self.data['project_code']}_{self.data['asset_type']}_{self.data['asset_name']}_{self.data['dimensions_length']}_{self.data['market_language']}_{frame_rate}_ST_Mix-1dBTP.wav",
-            f"{self.data['project_code']}_{self.data['asset_type']}_{self.data['asset_name']}_{self.data['dimensions_length']}_{self.data['market_language']}_{frame_rate}_ST_Music-1dBTP.wav",
-            f"{self.data['project_code']}_{self.data['asset_type']}_{self.data['asset_name']}_{self.data['dimensions_length']}_{self.data['market_language']}_{frame_rate}_ST_Narr-1dBTP.wav",
+    def loadConfigFile(self):
+        # Create config file if it does not exist
+        if not exists(self.config_path):
+            with open(self.config_path, 'wb') as config_file:
+                pickle.dump(self.config, config_file)
 
-            # Dia script
-            'Dia_Script',
-            f"{self.data['project_code']}_{self.data['asset_type']}_{self.data['asset_name']}_{self.data['dimensions_length']}_Dia_Script.doc",
+        with open(self.config_path, 'rb') as config_file:
+            self.config = pickle.load(config_file)
 
-            # GFX_Project
-            'GFX_Project',
+    def saveConfigFile(self):
+        with open(self.config_path, 'wb') as config_file:
+            pickle.dump(self.config, config_file)
 
-            # Ref file
-            'Ref_File',
-            f"{self.data['project_code']}_{self.data['asset_type']}_{self.data['asset_name']}_{self.data['dimensions_length']}_{self.data['variation']}_{self.data['market_language']}-TXTD_{self.data['resolution']}_{frame_rate}_H264.mov"
+    def getStructureFromUI(self, app):
+        data = self.default_project_data.copy()
+        data_fields =  [
+            'project_name',
+            'project_code',
+            'project_type',
+            'asset_name',
+            'asset_type',
+            'dimensions_length',
+            'variation',
+            'market_language',
+            'resolution',
+            'frame_rate',
+            'frame_rate_short'
         ]
+        # Get data from all textboxes and combo boxes
+        for field in data_fields:
+            if field + '_tb' in app.ui['project_structure']:
+                data[field] = app.ui['project_structure'][field + '_tb'].text()
+            elif field + '_cb' in app.ui['project_structure']:
+                data[field] = app.ui['project_structure'][field + '_cb'].currentText()
+            if field == 'frame_rate':
+                data['frame_rate_short'] = data['frame_rate'].replace('.', '')
 
-        for i, name in enumerate(names):
-            self.helperApp.proj_struct[i][0].setText(spacer*self.helperApp.proj_struct[i][1] + name)
+        # Convert project structure to filenames
+        new_struct = {}
+        q = [(self.project_structure, new_struct)]
+        while len(q):
+            curr_struct, new_curr_struct = q.pop(0)
+
+            if type(curr_struct) is dict:
+                # If current directory contains directories, add them to queue
+                sorted_lbls = sorted([x for x in curr_struct])
+                for lbl_format in sorted_lbls:
+                    lbl = lbl_format.format(**data)
+                    if not lbl in new_curr_struct:
+                        if type(curr_struct[lbl_format]) is dict:
+                            new_curr_struct[lbl] = {}
+                        else:
+                            new_curr_struct[lbl] = []
+                    q = [(curr_struct[lbl_format], new_curr_struct[lbl])] + q
+            else:
+                # If current directory contains files, add them as sorted list
+                new_curr_struct += [x.format(**data) for x in curr_struct if not x in new_curr_struct]
+                new_curr_struct.sort()
+
+        return new_struct
+
+    def parseFilename(self, filename):
+        data = self.default_project_data.copy()
+
+        # Get project code if exists
+        if not match(r"[\w]{3}_.*", filename):
+            return None
+        data['project_code'] = filename[:3]
+        filename = filename[4:]
+
+        # Get asset type
+        asset_type_options_regex = "|".join([o[0] for o in self.config['asset_type']['options']])
+        if not match("^(" + asset_type_options_regex + ").*", filename):
+            return None
+        data['asset_type'] = search("(" + asset_type_options_regex + ")", filename).group(1)
+        filename = filename[len(data['asset_type']) + 1:]
+
+        # Find project type from asset type
+        for at, pt in self.config['asset_type']['options']:
+            if at == data['asset_type']:
+                data['project_type'] = pt
+                break
+        if not 'project_type' in data:
+            return None
+
+        # Get asset name and dimension/video length
+        filename_parts = filename.split('_')
+        data['asset_name'] = filename_parts[0]
+        data['dimensions_length'] = filename_parts[1]
+
+        if (filename_parts[2] + filename_parts[3]).startswith('DiaScript'):
+            data['file_type'] = 'dia_script'
+            return data
+        elif filename_parts[2] in self.config['variation']['options']:
+            data['variation'] = filename_parts[2]
+            data['market_language'] = filename_parts[3][:-5]
+            data['resolution'] = filename_parts[4]
+            data['frame_rate_short']  = data['frame_rate'] = filename_parts[5]
+            if data['frame_rate_short'] == '2398':
+                data['frame_rate'] = '23.98'
+            data['file_type'] = 'mov_' + filename_parts[3][-4:].lower() + '_' + filename_parts[6].split('.')[0].lower()
+        else:
+            data['market_language'] = filename_parts[2]
+            data['frame_rate_short']  = data['frame_rate'] = filename_parts[3]
+            if data['frame_rate_short'] == '2398':
+                data['frame_rate'] = '23.98'
+            data['file_type'] = 'audio_' + filename_parts[5].split('-')[0].lower()
+
+        return data
+
+    def moveFilesFromExportDir(self, export_dir, destination_dir, app):
+        messages = []
+        if not exists(export_dir):
+            messages += [('Export directory does not exist!', ERROR)]
+        if not exists(destination_dir):
+            messages += [('Destination directory does not exist!', ERROR)]
+        if len(messages):
+            return messages
+
+        # Get all files that need to be moved
+        export_files = sorted(glob(export_dir + '/*'), key=lambda x: -len(x))
+        paths = []
+        for export_file in export_files:
+            # Parse filename
+            export_filename = export_file.split('/')[-1]
+            parsed_data = self.parseFilename(export_filename)
+            if parsed_data is None:
+                messages += [('Could not parse filename ' + export_filename, ERROR)]
+                continue
+
+            # If file type is mov, it should contain all data, so use it
+            # to create project structure and directories
+            if parsed_data['file_type'].startswith('mov'):
+                q = [(self.project_structure['{project_name}'], destination_dir)]
+                while len(q):
+                    curr, p = q.pop(0)
+
+                    for lbl_format in curr:
+                        curr_path = f"{p}/{lbl_format.format(**parsed_data)}"
+                        if not exists(curr_path):
+                            mkdir(curr_path)
+                            messages += [('New directory created: ' + curr_path, INFO)]
+
+                        if type(curr[lbl_format]) is dict:
+                            q = [(curr[lbl_format], curr_path)] + q
+                        else:
+                            for filename_format in curr[lbl_format]:
+                                file_path = f"{curr_path}/{filename_format.format(**parsed_data)}"
+                                if not file_path in paths:
+                                    paths += [file_path]
+
+            for path in paths:
+                curr_filename = path.split('/')[-1]
+                if export_filename != curr_filename:
+                    continue
+
+                overwrite_file = None
+                # If file exists in destination directory, ask if it should be overwriten
+                if exists(path):
+                    qm = QMessageBox()
+                    overwrite_file = qm.question(app, '', f"File {path} already exist!\n Do you want to overwrite it?", qm.Yes | qm.No)
+
+                # Move file or print message
+                if not exists(path):
+                    rename(export_file, path)
+                    messages += [(f"File {export_filename} moved to {path}", INFO)]
+                elif exists(path) and overwrite_file == qm.Yes:
+                    replace(export_file, path)
+                    messages += [(f"File {export_filename} overwrite {path}", INFO)]
+                else:
+                    messages += [(f"File {export_filename} was not moved!", ERROR)]
+
+        return messages
 
 
-class ProjectHelperApp(QMainWindow):
+class Projectapp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.title = 'LightFilm Project Helper'
         self.helper = None
         self.tabs = QTabWidget()
         self.ui = {
-            'project_structure': {},
+            'project_structure': {
+                'data': {}
+            },
             'move_project': {},
             'config': {}
         }
-        self.config_path = './main.cfg'
-        self.config = {
-            'project_type': {'label': 'Project type:',   'options': []},
-            'asset_type':   {'label': 'Asset type:',     'options': []}
-        }
+        self.helper = ProjectHelper()
+        self.log_file = 'log.log'
 
         self.setWindowTitle(self.title)
+        self.setMinimumWidth(800)
         self.setCentralWidget(self.tabs)
 
         # Init UI
@@ -88,94 +265,300 @@ class ProjectHelperApp(QMainWindow):
         self.initMoveProjectUI()
         self.initConfigUI()
 
-        # Load config
-        self.loadConfigFile()
-
-    def loadConfigFile(self):
-        # Check if config file exists
-        if not exists(self.config_path):
-            with open(self.config_path, 'w') as config_file:
-                config_file.write("project_type:" + ','.join(['Social_Media', 'TV']) + "\n")
-                config_file.write("asset_type:" + ','.join(['1x1_Newsfeed', '4x5_Newsfeed', '9x16_Vertical']) + "\n")
-        with open(self.config_path, 'r') as config_file:
-            for line in config_file:
-                line = line.replace("\n", '')
-                id, options = line.split(':')
-                self.config[id]['options'] = sorted(options.split(','))
+        self.helper.loadConfigFile()
         self.refreshLists()
 
-    def saveConfigFile(self):
-        with open(self.config_path, 'w') as config_file:
-            for c in self.config:
-                config_file.write(f"{c}:{','.join(self.config[c]['options'])}\n")
+    def refreshLists(self):
+        # Clear and fill again all combo boxes and lists
+        for x in self.helper.config:
+            for tab in self.ui:
+                cb = x + '_cb'
+                lst = x + '_list'
+                if cb  in self.ui[tab] and isinstance(self.ui[tab][cb], QComboBox):
+                    self.ui[tab][cb].clear()
+                    if x == 'asset_type':
+                        self.ui[tab][cb].addItems([item[0] for item in self.helper.config[x]['options']])
+                    else:
+                        self.ui[tab][cb].addItems(self.helper.config[x]['options'])
+                if lst in self.ui[tab] and isinstance(self.ui[tab][lst], QListWidget):
+                    self.ui[tab][lst].clear()
+                    for item in self.helper.config[x]['options']:
+                        if x == 'asset_type':
+                            self.ui[tab][lst].addItem(QListWidgetItem(f"{item[0]} ({item[1]})"))
+                        else:
+                            self.ui[tab][lst].addItem(QListWidgetItem(item))
 
-    def openFileDialog(self):
-        directory = QFileDialog.getExistingDirectory(self, 'Project root', '')
-        if directory:
-            self.ui['move_project']['project_root_dir'].setText(directory)
+        if len(self.helper.config['project_type']['options']):
+            self.projectTypeSelectionChanged(self.helper.config['project_type']['options'][0])
 
+    #########################
+    # Project Structure tab #
+    #########################
+    def initProjectStructureUI(self):
+        # Set layout
+        layout = QHBoxLayout()
+        left_layout = QGridLayout()
+        right_scroll_area = QScrollArea()
+        right_layout = QVBoxLayout()
+        right_layout.setContentsMargins(15, 10, 15, 10)
+        right_layout.addStretch()
+        self.ui['project_structure']['right_layout'] = right_layout
+
+        # Define all input fields
+        inputs = [
+            {'label': 'Project name:',  'id': 'project_name_tb',    'widget': QLineEdit},
+            {'label': 'Project code:',  'id': 'project_code_tb',    'widget': QLineEdit},
+            {'label': 'Project type:',  'id': 'project_type_cb',    'widget': QComboBox,    'action': self.projectTypeSelectionChanged},
+            {'label': 'Asset name:',    'id': 'asset_name_tb',      'widget': QLineEdit},
+            {'label': 'Asset type:',    'id': 'asset_type_cb',      'widget': QComboBox},
+            {'label': 'Dimensions/video length:', 'id': 'dimensions_length_cb', 'widget': QComboBox},
+            {'label': 'Variation:',     'id': 'variation_cb',       'widget': QComboBox},
+            {'label': 'Market and language:', 'id': 'market_language_tb',       'widget': QLineEdit, 'default': 'OV-en-OV'},
+            {'label': 'Resolution:',    'id': 'resolution_cb',      'widget': QComboBox},
+            {'label': 'Frame rate:',    'id': 'frame_rate_cb',      'widget': QComboBox}
+        ]
+
+        for i, item in enumerate(inputs):
+            # label
+            label = QLabel()
+            label.setText(item['label'])
+            label.setMaximumWidth(175)
+            left_layout.addWidget(label, i, 0)
+
+            # Textbox or combo box
+            inp = item['widget']()
+            if item['widget'] is QComboBox and 'action' in item:
+                inp.currentTextChanged.connect(item['action'])
+            elif item['widget'] is QLineEdit and 'default' in item:
+                inp.setText(item['default'])
+            inp.setMaximumWidth(175)
+            self.ui['project_structure'][item['id']] = inp
+            left_layout.addWidget(inp, i, 1)
+
+        # Add project button
+        button = QPushButton('Add project')
+        button.setDefault(True)
+        button.clicked.connect(self.addToProjectStructure)
+        left_layout.addWidget(button, len(inputs), 0, 1, 2)
+
+        # Clear projects button
+        button = QPushButton('Clear projects')
+        button.setDefault(True)
+        button.clicked.connect(self.clearProjectStructure)
+        left_layout.addWidget(button, len(inputs) + 1, 0, 1, 2)
+
+        layout.addLayout(left_layout)
+
+        # Making right layout scrollable
+        widget = QWidget()
+        widget.setLayout(right_layout)
+        right_scroll_area.setWidget(widget)
+        right_scroll_area.setWidgetResizable(True)
+        layout.addWidget(right_scroll_area)
+
+        # Adding tab to main window
+        widget = QWidget()
+        widget.setLayout(layout)
+        self.tabs.addTab(widget, 'Project Structure')
+
+    def projectTypeSelectionChanged(self, value):
+        self.ui['project_structure']['asset_type_cb'].clear()
+        self.ui['project_structure']['asset_type_cb'].addItems([x[0] for x in self.helper.config['asset_type']['options'] if x[1] == value])
+
+    def validateProjectStructureFields(self):
+        for item in self.ui['project_structure']:
+            # If any textbox is empty return False
+            if isinstance(self.ui['project_structure'][item], QLineEdit) and \
+                        not len(self.ui['project_structure'][item].text()):
+                return False
+        return True
+
+    def addToProjectStructure(self):
+        if not self.validateProjectStructureFields():
+            return
+
+        structure = self.helper.getStructureFromUI(self)
+        q = [(structure, self.ui['project_structure']['data'])]
+        while len(q):
+            curr_struct, new_curr_struct = q.pop(0)
+
+            if type(curr_struct) is dict:
+                # If current directory contains directories, add them to queue
+                sorted_lbls = sorted([x for x in curr_struct])
+                for lbl in sorted_lbls:
+                    if not lbl in new_curr_struct:
+                        if type(curr_struct[lbl]) is dict:
+                            new_curr_struct[lbl] = {}
+                        else:
+                            new_curr_struct[lbl] = []
+                    q = [(curr_struct[lbl], new_curr_struct[lbl])] + q
+            else:
+                # If current directory contains files, add them as sorted list
+                new_curr_struct += [x for x in curr_struct if not x in new_curr_struct]
+                new_curr_struct.sort()
+
+        self.refreshProjectStructure()
+
+    def clearProjectStructure(self):
+        self.ui['project_structure']['data'] = {}
+
+        self.refreshProjectStructure()
+
+    def refreshProjectStructure(self):
+        right_layout = self.ui['project_structure']['right_layout']
+        space_size = 20
+
+        # Clear right layout
+        n_widgets = right_layout.count() - 1
+        for i in range(n_widgets - 1, -1, -1):
+            right_layout.itemAt(i).widget().deleteLater()
+
+        # Add a label for each direcotry/file
+        q = [(self.ui['project_structure']['data'], None, -1)]
+        while len(q):
+            curr, lbl_text, space = q.pop(0)
+            if not lbl_text is None:
+                # Add directory label
+                label = QLabel(lbl_text)
+                label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+                label.setStyleSheet('margin-left: ' + str(space*space_size) + 'px')
+                right_layout.insertWidget(right_layout.count() - 1, label)
+
+            if type(curr) is dict:
+                # If current directory contains directories, add them to queue
+                sorted_lbls = sorted([x for x in curr])
+                for lbl in sorted_lbls:
+                    q = [(curr[lbl], lbl, space + 1)] + q
+            else:
+                # If current directory contains files, add labels
+                for x in curr:
+                    label = QLabel(x)
+                    label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+                    label.setStyleSheet('margin-left: ' + str((space + 1)*space_size) + 'px')
+                    right_layout.insertWidget(right_layout.count() - 1, label)
+
+    ####################
+    # Move Project tab #
+    ####################
     def initMoveProjectUI(self):
         # Set layout
         layout = QVBoxLayout()
-        top_layout = QHBoxLayout()
+        input_layout = QGridLayout()
 
-        # Label
-        label = QLabel()
-        label.setText('Project root path:')
-        top_layout.addWidget(label)
+        inputs = [
+            {'label': 'Export directory:',  'id': 'export_directory',   'widget': QLineEdit},
+            {'label': 'Project root:',  'id': 'project_root',   'widget': QLineEdit}
+        ]
 
-        # Textbox with root path value
-        textbox = QLineEdit()
-        top_layout.addWidget(textbox)
-        self.ui['move_project']['project_root_dir'] = textbox
+        for i, item in enumerate(inputs):
+            # label
+            label = QLabel()
+            label.setText(item['label'])
+            input_layout.addWidget(label, i, 0)
 
-        # File dialog button
-        button = QPushButton('Search...')
-        button.clicked.connect(self.openFileDialog)
-        top_layout.addWidget(button)
+            # Textbox
+            inp = item['widget']()
+            if item['widget'] is QLineEdit and 'default' in item:
+                inp.setText(item['default'])
+            input_layout.addWidget(inp, i, 1)
+            self.ui['move_project'][item['id'] + '_tb'] = inp
 
-        layout.addLayout(top_layout)
-        layout.addStretch()
+            # File dialog button
+            btn = QPushButton('Search...')
+            btn.clicked.connect(self.openFileDialog)
+            input_layout.addWidget(btn, i, 2)
+            self.ui['move_project'][item['id'] + '_btn'] = btn
+
+        # Move files button
+        btn = QPushButton('Move files')
+        btn.clicked.connect(self.moveProject)
+        input_layout.addWidget(btn, len(inputs), 2)
+
+        layout.addLayout(input_layout)
+
+        # Message box
+        scroll_area = QScrollArea()
+        messages_layout = QVBoxLayout()
+        messages_layout.addStretch()
+        widget = QWidget()
+        widget.setLayout(messages_layout)
+        scroll_area.setWidget(widget)
+        scroll_area.setWidgetResizable(True)
+        layout.addWidget(scroll_area)
+        self.ui['move_project']['messages'] = messages_layout
 
         # Add new tab
         widget = QWidget()
         widget.setLayout(layout)
         self.tabs.addTab(widget, 'Move Project')
 
-    def refreshLists(self):
-        # Clear and fill again all combo boxes and lists
-        for c in self.config:
-            for tab in self.ui:
-                if c in self.ui[tab] and isinstance(self.ui[tab][c], QComboBox):
-                    self.ui[tab][c].clear()
-                    self.ui[tab][c].addItems(self.config[c]['options'])
-                elif c in self.ui[tab] and isinstance(self.ui[tab][c], QListWidget):
-                    self.ui[tab][c].clear()
-                    for item in self.config[c]['options']:
-                        self.ui[tab][c].addItem(QListWidgetItem(item))
+    def openFileDialog(self):
+        directory = QFileDialog.getExistingDirectory(self, 'Find directory', '')
 
+        if directory:
+            for btn_id in self.ui['move_project']:
+                # Find clicked button
+                if not self.ui['move_project'][btn_id] is self.sender():
+                    continue
+
+                textbox_id = btn_id.replace('_btn', '_tb')
+                self.ui['move_project'][textbox_id].setText(directory)
+                break
+
+    def moveProject(self):
+        export_dir = self.ui['move_project']['export_directory_tb'].text()
+        project_root = self.ui['move_project']['project_root_tb'].text()
+
+        if export_dir == '' or project_root == '':
+            return
+
+        # Move files
+        messages = self.helper.moveFilesFromExportDir(export_dir, project_root, self)
+
+        # Write messages to log
+        with open(self.log_file, 'a') as log:
+            log.writelines([[f"INFO: {x[0]}\n", f"ERROR: {x[0]}\n"][x[1] == ERROR] for x in messages])
+
+        # Write messages to message box
+        message_box = self.ui['move_project']['messages']
+        for message in messages:
+            label = QLabel(message[0])
+            label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            if message[1] == ERROR:
+                label.setStyleSheet('color: red')
+            message_box.insertWidget(message_box.count() - 1, label)
+
+    ##############
+    # Config tab #
+    ##############
     def initConfigUI(self):
         # Set layout
         layout = QGridLayout()
 
-        for i, item in enumerate(self.config):
+        for i, item in enumerate(self.helper.config):
             # Label
             label = QLabel()
-            label.setText(self.config[item]['label'])
+            label.setText(self.helper.config[item]['label'])
             label.setAlignment(Qt.AlignTop)
             layout.addWidget(label, i, 0)
 
             # Empty list
             options = QListWidget()
             layout.addWidget(options, i, 1)
-            self.ui['config'][item] = options
+            self.ui['config'][item + '_list'] = options
 
             input_layout = QVBoxLayout()
 
             # Textbox for adding options
             inp = QLineEdit()
             input_layout.addWidget(inp)
-            self.ui['config'][item + '_textbox'] = inp
+            self.ui['config'][item + '_tb'] = inp
+
+            if item == 'asset_type':
+                # Add combo box for asset type parent (project type)
+                cb = QComboBox()
+                input_layout.addWidget(cb)
+                self.ui['config']['project_type_cb'] = cb
 
             # Add option button
             add = QPushButton('Add item')
@@ -195,8 +578,8 @@ class ProjectHelperApp(QMainWindow):
 
         # Save configuration button
         save = QPushButton('Save configuration')
-        save.clicked.connect(self.saveConfigFile)
-        layout.addWidget(save, len(self.config), 2)
+        save.clicked.connect(self.helper.saveConfigFile)
+        layout.addWidget(save, len(self.helper.config), 2)
 
         # Add new tab
         widget = QWidget()
@@ -208,11 +591,15 @@ class ProjectHelperApp(QMainWindow):
             # Find clicked button
             if not self.ui['config'][btn_id] is self.sender():
                 continue
-            textbox_id = btn_id.replace('add_button', 'textbox')
-            list_id = btn_id.replace('_add_button', '')
+
+            conf_id = btn_id.replace('_add_button', '')
+            textbox_id = conf_id + '_tb'
             if len(self.ui['config'][textbox_id].text()):
                 # Add new item to config
-                self.config[list_id]['options'] = sorted(self.config[list_id]['options'] + [self.ui['config'][textbox_id].text()])
+                if conf_id == 'asset_type':
+                    self.helper.config[conf_id]['options'] = sorted(self.helper.config[conf_id]['options'] + [(self.ui['config'][textbox_id].text(), self.ui['config']['project_type_cb'].currentText())], key=lambda x: x[0])
+                else:
+                    self.helper.config[conf_id]['options'] = sorted(self.helper.config[conf_id]['options'] + [self.ui['config'][textbox_id].text()])
             break
         self.refreshLists()
 
@@ -221,95 +608,29 @@ class ProjectHelperApp(QMainWindow):
             # Find clicked button
             if not self.ui['config'][btn_id] is self.sender():
                 continue
-            textbox_id = btn_id.replace('remove_button', 'textbox')
-            list_id = btn_id.replace('_remove_button', '')
+
+            conf_id = btn_id.replace('_remove_button', '')
+            textbox_id = conf_id + '_tb'
+            list_id = conf_id + '_list'
             selected = self.ui['config'][list_id].selectedItems()
             for item in selected:
                 # Set textbox value to removed item
-                self.ui['config'][textbox_id].setText(item.text())
-                # Remove selected item
-                self.config[list_id]['options'].remove(item.text())
+                if conf_id == 'asset_type':
+                    it = item.text().split(' (')
+                    it[1] = it[1][:-1]
+                    self.helper.config[conf_id]['options'].remove(tuple(it))
+                    self.ui['config'][textbox_id].setText(it[0])
+                else:
+                    self.helper.config[conf_id]['options'].remove(item.text())
+                    self.ui['config'][textbox_id].setText(item.text())
             break
         self.refreshLists()
-
-    def initProjectStructureUI(self):
-        # Set layout
-        layout = QHBoxLayout()
-        left_layout = QGridLayout()
-        right_layout = QVBoxLayout()
-        right_layout.setContentsMargins(5, 10, 5, 10)
-
-        # Define all input fields
-        inputs = [
-            {'label': 'Project name:',  'id': 'project_name',   'widget': QLineEdit},
-            {'label': 'Project code:',  'id': 'project_code',   'widget': QLineEdit},
-            {'label': 'Project type:',  'id': 'project_type',   'widget': QComboBox},
-            {'label': 'Asset name:',    'id': 'asset_name',     'widget': QLineEdit},
-            {'label': 'Asset type:',    'id': 'asset_type',     'widget': QComboBox},
-            {'label': 'Dimensions/video length:', 'id': 'dimensions_length', 'widget': QLineEdit},
-            {'label': 'Variation:',     'id': 'variation',      'widget': QLineEdit},
-            {'label': 'Market and language:', 'id': 'market_language', 'widget': QLineEdit, 'default': 'OV-en-OV'},
-            {'label': 'Resolution:',    'id': 'resolution',     'widget': QLineEdit},
-            {'label': 'Frame rate:',    'id': 'frame_rate',     'widget': QLineEdit}
-        ]
-
-        for i, item in enumerate(inputs):
-            # label
-            label = QLabel()
-            label.setText(item['label'])
-            left_layout.addWidget(label, i, 0)
-
-            # Textbox or combo box
-            inp = item['widget']()
-            if item['widget'] is QLineEdit and 'default' in item:
-                inp.setText(item['default'])
-            self.ui['project_structure'][item['id']] = inp
-            left_layout.addWidget(inp, i, 1)
-
-        # Generate filenames button
-        button = QPushButton('Generate filenames')
-        button.setDefault(True)
-        button.clicked.connect(self.getProjectStructure)
-        left_layout.addWidget(button, len(inputs), 0, 1, 2)
-
-        layout.addLayout(left_layout)
-
-        # Project structure labels
-        spacers = [0, 1, 2, 3, 4, 5, 6, 7, 7, 6, 7, 7, 7, 7, 7, 6, 7, 6, 6, 7]
-        self.proj_struct = []
-        for i, s in enumerate(spacers):
-            label = QLabel('')
-            label.setFont(QFont('Monospace', 8))
-            label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-            self.proj_struct += [(label, s)]
-            right_layout.addWidget(label)
-
-        # Adding tab to main window
-        layout.addLayout(right_layout)
-        widget = QWidget()
-        widget.setLayout(layout)
-        self.tabs.addTab(widget, 'Project Structure')
-
-    def validateProjectStructureFields(self):
-        for item in self.ui['project_structure']:
-            # If any textbox is empty return False
-            if isinstance(self.ui['project_structure'][item], QLineEdit) and \
-                        not len(self.ui['project_structure'][item].text()):
-                return False
-        return True
-
-    def getProjectStructure(self):
-        if not self.validateProjectStructureFields():
-            return
-
-        self.helper = ProjectHelper(self)
-        self.helper.getStructure()
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
 
-    window = ProjectHelperApp()
+    window = Projectapp()
     window.show()
     window.raise_()
 
