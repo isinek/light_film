@@ -1,9 +1,10 @@
-from distutils.log import ERROR, INFO
 import sys
+from datetime import datetime
 from os import mkdir, rename, replace
 from os.path import exists
 from glob import glob
 from re import match, search
+from distutils.log import ERROR, INFO, WARN
 import pickle
 
 from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QTabWidget, QFileDialog, QMessageBox
@@ -13,7 +14,8 @@ from PyQt5.QtCore import Qt
 
 
 class ProjectHelper():
-    def __init__(self):
+    def __init__(self, app):
+        self.app = app
         self.config_path = './main.cfg'
         self.config = {
             'project_type': {'label': 'Project type:',  'options': []},
@@ -65,6 +67,19 @@ class ProjectHelper():
             }
         }
 
+        self.log_path = './log.log'
+
+    def log(self, msg, log_level):
+        log_level_str = 'INFO'
+        if log_level == ERROR:
+            log_level_str = 'ERROR'
+        if log_level == WARN:
+            log_level_str = 'WARNING'
+
+        timestamp = 'T'.join(str(datetime.now()).split(' '))
+        with open(self.log_path, 'a') as log_file:
+            log_file.write(f"[{timestamp}] {log_level_str}: {msg}\n")
+
     def loadConfigFile(self):
         # Create config file if it does not exist
         if not exists(self.config_path):
@@ -78,7 +93,22 @@ class ProjectHelper():
         with open(self.config_path, 'wb') as config_file:
             pickle.dump(self.config, config_file)
 
-    def getStructureFromUI(self, app):
+    def loadExternalConfigFile(self):
+        cfg_path = QFileDialog.getOpenFileName(self.app, 'Load config file', '', 'Config file (*.cfg)')
+
+        if exists(cfg_path[0]):
+            with open(cfg_path[0], 'rb') as config_file:
+                self.config = pickle.load(config_file)
+        self.app.refreshLists()
+
+    def exportConfigFile(self):
+        cfg_path = QFileDialog.getSaveFileName(self.app, 'Save config file', 'lightfilm_project_helper.cfg', 'Config file (*.cfg)')
+
+        if len(cfg_path[0]):
+            with open(cfg_path[0], 'wb') as config_file:
+                pickle.dump(self.config, config_file)
+
+    def getStructureFromUI(self):
         data = self.default_project_data.copy()
         data_fields =  [
             'project_name',
@@ -95,10 +125,10 @@ class ProjectHelper():
         ]
         # Get data from all textboxes and combo boxes
         for field in data_fields:
-            if field + '_tb' in app.ui['project_structure']:
-                data[field] = app.ui['project_structure'][field + '_tb'].text()
-            elif field + '_cb' in app.ui['project_structure']:
-                data[field] = app.ui['project_structure'][field + '_cb'].currentText()
+            if field + '_tb' in self.app.ui['project_structure']:
+                data[field] = self.app.ui['project_structure'][field + '_tb'].text()
+            elif field + '_cb' in self.app.ui['project_structure']:
+                data[field] = self.app.ui['project_structure'][field + '_cb'].currentText()
             if field == 'frame_rate':
                 data['frame_rate_short'] = data['frame_rate'].replace('.', '')
 
@@ -110,7 +140,7 @@ class ProjectHelper():
 
             if type(curr_struct) is dict:
                 # If current directory contains directories, add them to queue
-                sorted_lbls = sorted([x for x in curr_struct])
+                sorted_lbls = sorted([x for x in curr_struct], reverse=True)
                 for lbl_format in sorted_lbls:
                     lbl = lbl_format.format(**data)
                     if not lbl in new_curr_struct:
@@ -175,24 +205,29 @@ class ProjectHelper():
 
         return data
 
-    def moveFilesFromExportDir(self, export_dir, destination_dir, app):
+    def moveFilesFromExportDir(self, export_dir, destination_dir):
         messages = []
         if not exists(export_dir):
             messages += [('Export directory does not exist!', ERROR)]
+            self.log(messages[-1][0], messages[-1][1])
         if not exists(destination_dir):
             messages += [('Destination directory does not exist!', ERROR)]
+            self.log(messages[-1][0], messages[-1][1])
         if len(messages):
             return messages
 
         # Get all files that need to be moved
         export_files = sorted(glob(export_dir + '/*'), key=lambda x: -len(x))
+        export_filenames = []
         paths = []
         for export_file in export_files:
             # Parse filename
             export_filename = export_file.split('/')[-1]
+            export_filenames += [export_filename]
             parsed_data = self.parseFilename(export_filename)
             if parsed_data is None:
                 messages += [('Could not parse filename ' + export_filename, ERROR)]
+                self.log(messages[-1][0], messages[-1][1])
                 continue
 
             # If file type is mov, it should contain all data, so use it
@@ -207,6 +242,7 @@ class ProjectHelper():
                         if not exists(curr_path):
                             mkdir(curr_path)
                             messages += [('New directory created: ' + curr_path, INFO)]
+                            self.log(messages[-1][0], messages[-1][1])
 
                         if type(curr[lbl_format]) is dict:
                             q = [(curr[lbl_format], curr_path)] + q
@@ -216,26 +252,40 @@ class ProjectHelper():
                                 if not file_path in paths:
                                     paths += [file_path]
 
-            for path in paths:
-                curr_filename = path.split('/')[-1]
-                if export_filename != curr_filename:
-                    continue
+            path = None
+            for p in paths:
+                if export_filename == p.split('/')[-1]:
+                    path = p
+                    break
 
-                overwrite_file = None
-                # If file exists in destination directory, ask if it should be overwriten
-                if exists(path):
-                    qm = QMessageBox()
-                    overwrite_file = qm.question(app, '', f"File {path} already exist!\n Do you want to overwrite it?", qm.Yes | qm.No)
+            if path is None:
+                messages += [(f"Can't find a project for file {export_file}!", WARN)]
+                continue
 
-                # Move file or print message
-                if not exists(path):
-                    rename(export_file, path)
-                    messages += [(f"File {export_filename} moved to {path}", INFO)]
-                elif exists(path) and overwrite_file == qm.Yes:
-                    replace(export_file, path)
-                    messages += [(f"File {export_filename} overwrite {path}", INFO)]
-                else:
-                    messages += [(f"File {export_filename} was not moved!", ERROR)]
+            overwrite_file = None
+            # If file exists in destination directory, ask if it should be overwriten
+            if exists(path):
+                qm = QMessageBox()
+                overwrite_file = qm.question(self.app, '', f"File {path} already exist!\n Do you want to overwrite it?", qm.Yes | qm.No)
+
+            # Move file or print message
+            if not exists(path):
+                rename(export_file, path)
+                messages += [(f"File {export_filename} moved to {path}", INFO)]
+                self.log(messages[-1][0], messages[-1][1])
+            elif exists(path) and overwrite_file == qm.Yes:
+                replace(export_file, path)
+                messages += [(f"File {export_filename} overwrited {path}", INFO)]
+                self.log(messages[-1][0], messages[-1][1])
+            else:
+                messages += [(f"File {export_filename} was not moved!", ERROR)]
+                self.log(messages[-1][0], messages[-1][1])
+
+        for p in paths:
+            curr_file = p.split('/')[-1]
+            if not curr_file in export_filenames:
+                messages += [(f"File {curr_file} is part of the project, but was not exported.", WARN)]
+                self.log(messages[-1][0], messages[-1][1])
 
         return messages
 
@@ -253,8 +303,7 @@ class Projectapp(QMainWindow):
             'move_project': {},
             'config': {}
         }
-        self.helper = ProjectHelper()
-        self.log_file = 'log.log'
+        self.helper = ProjectHelper(self)
 
         self.setWindowTitle(self.title)
         self.setMinimumWidth(800)
@@ -275,21 +324,28 @@ class Projectapp(QMainWindow):
                 cb = x + '_cb'
                 lst = x + '_list'
                 if cb  in self.ui[tab] and isinstance(self.ui[tab][cb], QComboBox):
+                    selected = self.ui[tab][cb].currentIndex()
                     self.ui[tab][cb].clear()
-                    if x == 'asset_type':
+                    if x in ['asset_type', 'resolution']:
                         self.ui[tab][cb].addItems([item[0] for item in self.helper.config[x]['options']])
                     else:
                         self.ui[tab][cb].addItems(self.helper.config[x]['options'])
+                    if 0 <= selected < len(self.helper.config[x]['options']):
+                        self.ui[tab][cb].setCurrentIndex(selected)
+                    else:
+                        self.ui[tab][cb].setCurrentIndex(0)
                 if lst in self.ui[tab] and isinstance(self.ui[tab][lst], QListWidget):
                     self.ui[tab][lst].clear()
                     for item in self.helper.config[x]['options']:
-                        if x == 'asset_type':
+                        if x in ['asset_type', 'resolution']:
                             self.ui[tab][lst].addItem(QListWidgetItem(f"{item[0]} ({item[1]})"))
                         else:
                             self.ui[tab][lst].addItem(QListWidgetItem(item))
 
-        if len(self.helper.config['project_type']['options']):
-            self.projectTypeSelectionChanged(self.helper.config['project_type']['options'][0])
+        if self.ui['project_structure']['project_type_cb'].count():
+            self.projectTypeSelectionChanged(self.ui['project_structure']['project_type_cb'].currentText())
+        elif self.ui['project_structure']['asset_type_cb'].count():
+            self.assetTypeSelectionChanged(self.ui['project_structure']['asset_type_cb'].currentText())
 
     #########################
     # Project Structure tab #
@@ -310,7 +366,7 @@ class Projectapp(QMainWindow):
             {'label': 'Project code:',  'id': 'project_code_tb',    'widget': QLineEdit},
             {'label': 'Project type:',  'id': 'project_type_cb',    'widget': QComboBox,    'action': self.projectTypeSelectionChanged},
             {'label': 'Asset name:',    'id': 'asset_name_tb',      'widget': QLineEdit},
-            {'label': 'Asset type:',    'id': 'asset_type_cb',      'widget': QComboBox},
+            {'label': 'Asset type:',    'id': 'asset_type_cb',      'widget': QComboBox,    'action': self.assetTypeSelectionChanged},
             {'label': 'Dimensions/video length:', 'id': 'dimensions_length_cb', 'widget': QComboBox},
             {'label': 'Variation:',     'id': 'variation_cb',       'widget': QComboBox},
             {'label': 'Market and language:', 'id': 'market_language_tb',       'widget': QLineEdit, 'default': 'OV-en-OV'},
@@ -347,6 +403,7 @@ class Projectapp(QMainWindow):
         button.clicked.connect(self.clearProjectStructure)
         left_layout.addWidget(button, len(inputs) + 1, 0, 1, 2)
 
+        left_layout.setRowStretch(left_layout.rowCount(), 1)
         layout.addLayout(left_layout)
 
         # Making right layout scrollable
@@ -365,6 +422,10 @@ class Projectapp(QMainWindow):
         self.ui['project_structure']['asset_type_cb'].clear()
         self.ui['project_structure']['asset_type_cb'].addItems([x[0] for x in self.helper.config['asset_type']['options'] if x[1] == value])
 
+    def assetTypeSelectionChanged(self, value):
+        self.ui['project_structure']['resolution_cb'].clear()
+        self.ui['project_structure']['resolution_cb'].addItems([x[0] for x in self.helper.config['resolution']['options'] if x[1] == value])
+
     def validateProjectStructureFields(self):
         for item in self.ui['project_structure']:
             # If any textbox is empty return False
@@ -377,14 +438,14 @@ class Projectapp(QMainWindow):
         if not self.validateProjectStructureFields():
             return
 
-        structure = self.helper.getStructureFromUI(self)
+        structure = self.helper.getStructureFromUI()
         q = [(structure, self.ui['project_structure']['data'])]
         while len(q):
             curr_struct, new_curr_struct = q.pop(0)
 
             if type(curr_struct) is dict:
                 # If current directory contains directories, add them to queue
-                sorted_lbls = sorted([x for x in curr_struct])
+                sorted_lbls = sorted([x for x in curr_struct], reverse=True)
                 for lbl in sorted_lbls:
                     if not lbl in new_curr_struct:
                         if type(curr_struct[lbl]) is dict:
@@ -426,7 +487,7 @@ class Projectapp(QMainWindow):
 
             if type(curr) is dict:
                 # If current directory contains directories, add them to queue
-                sorted_lbls = sorted([x for x in curr])
+                sorted_lbls = sorted([x for x in curr], reverse=True)
                 for lbl in sorted_lbls:
                     q = [(curr[lbl], lbl, space + 1)] + q
             else:
@@ -513,19 +574,17 @@ class Projectapp(QMainWindow):
             return
 
         # Move files
-        messages = self.helper.moveFilesFromExportDir(export_dir, project_root, self)
+        messages = self.helper.moveFilesFromExportDir(export_dir, project_root)
 
-        # Write messages to log
-        with open(self.log_file, 'a') as log:
-            log.writelines([[f"INFO: {x[0]}\n", f"ERROR: {x[0]}\n"][x[1] == ERROR] for x in messages])
-
-        # Write messages to message box
+        # Write messages to message box after clearing
         message_box = self.ui['move_project']['messages']
         for message in messages:
             label = QLabel(message[0])
             label.setTextInteractionFlags(Qt.TextSelectableByMouse)
             if message[1] == ERROR:
                 label.setStyleSheet('color: red')
+            elif message[1] == WARN:
+                label.setStyleSheet('color: orange')
             message_box.insertWidget(message_box.count() - 1, label)
 
     ##############
@@ -534,6 +593,7 @@ class Projectapp(QMainWindow):
     def initConfigUI(self):
         # Set layout
         layout = QGridLayout()
+        layout.setVerticalSpacing(10)
 
         for i, item in enumerate(self.helper.config):
             # Label
@@ -559,6 +619,11 @@ class Projectapp(QMainWindow):
                 cb = QComboBox()
                 input_layout.addWidget(cb)
                 self.ui['config']['project_type_cb'] = cb
+            elif item == 'resolution':
+                # Add combo box for asset type parent (project type)
+                cb = QComboBox()
+                input_layout.addWidget(cb)
+                self.ui['config']['asset_type_cb'] = cb
 
             # Add option button
             add = QPushButton('Add item')
@@ -577,9 +642,19 @@ class Projectapp(QMainWindow):
             layout.addLayout(input_layout, i, 2)
 
         # Save configuration button
-        save = QPushButton('Save configuration')
-        save.clicked.connect(self.helper.saveConfigFile)
-        layout.addWidget(save, len(self.helper.config), 2)
+        btn = QPushButton('Save configuration')
+        btn.clicked.connect(self.helper.saveConfigFile)
+        layout.addWidget(btn, layout.count(), 2)
+
+        # Load configuration button
+        btn = QPushButton('Load configuration file')
+        btn.clicked.connect(self.helper.loadExternalConfigFile)
+        layout.addWidget(btn, layout.count(), 2)
+
+        # Export configuration button
+        btn = QPushButton('Export configuration file')
+        btn.clicked.connect(self.helper.exportConfigFile)
+        layout.addWidget(btn, layout.count(), 2)
 
         # Add new tab
         widget = QWidget()
@@ -596,10 +671,14 @@ class Projectapp(QMainWindow):
             textbox_id = conf_id + '_tb'
             if len(self.ui['config'][textbox_id].text()):
                 # Add new item to config
+                options = []
                 if conf_id == 'asset_type':
-                    self.helper.config[conf_id]['options'] = sorted(self.helper.config[conf_id]['options'] + [(self.ui['config'][textbox_id].text(), self.ui['config']['project_type_cb'].currentText())], key=lambda x: x[0])
+                    options = self.helper.config[conf_id]['options'] + [(self.ui['config'][textbox_id].text(), self.ui['config']['project_type_cb'].currentText())]
+                elif conf_id == 'resolution':
+                    options = self.helper.config[conf_id]['options'] + [(self.ui['config'][textbox_id].text(), self.ui['config']['asset_type_cb'].currentText())]
                 else:
-                    self.helper.config[conf_id]['options'] = sorted(self.helper.config[conf_id]['options'] + [self.ui['config'][textbox_id].text()])
+                    options = self.helper.config[conf_id]['options'] + [self.ui['config'][textbox_id].text()]
+                self.helper.config[conf_id]['options'] = sorted(options)
             break
         self.refreshLists()
 
@@ -615,7 +694,7 @@ class Projectapp(QMainWindow):
             selected = self.ui['config'][list_id].selectedItems()
             for item in selected:
                 # Set textbox value to removed item
-                if conf_id == 'asset_type':
+                if conf_id in ['asset_type', 'resolution']:
                     it = item.text().split(' (')
                     it[1] = it[1][:-1]
                     self.helper.config[conf_id]['options'].remove(tuple(it))
