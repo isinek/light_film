@@ -714,4 +714,3 @@ if __name__ == '__main__':
     window.raise_()
 
     sys.exit(app.exec_())
-
