@@ -57,7 +57,7 @@ class ProjectHelper():
                                     ],
                                     "{gfx_project_dir}": [],
                                     "{ref_file_dir}": [
-                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_{frame_rate_short}_H264.mov"
+                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_{frame_rate_short}_H264.mp4"
                                     ]
                                 }
                             }
