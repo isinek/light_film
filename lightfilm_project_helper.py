@@ -26,6 +26,20 @@ class ProjectHelper():
             'frame_rate':   {'label': 'Frame rate:',    'options': []}
         }
 
+        self.field_rules = {
+            'project_name': r"([a-zA-Z0-9\s\-]+)",
+            'project_code': r"([A-Z]{3})",
+            'project_type': None,
+            'asset_name': r"([a-zA-Z0-9\s\-\_]+)",
+            'asset_type': None,
+            'dimensions_length': None,
+            'variation': None,
+            'market_language': r"([a-zA-Z\-]+)",
+            'resolution': None,
+            'frame_rate': None,
+            'frame_rate_short': None
+        }
+
         self.default_project_data = {
             'finals_dir': 'FINALS',
             'audio_splits_dir': 'Audio_splits',
@@ -89,6 +103,14 @@ class ProjectHelper():
         with open(self.config_path, 'rb') as config_file:
             self.config = pickle.load(config_file)
 
+        for x in self.config:
+            if x in ['asset_type', 'resolution']:
+                self.field_rules[x] = r"(" + '|'.join([item[0] for item in self.config[x]['options']]) + r")"
+            else:
+                self.field_rules[x] = r"(" + '|'.join(self.config[x]['options']) + r")"
+                if x == 'frame_rate':
+                    self.field_rules['frame_rate_short'] = r"(" + '|'.join([o.replace('.', '') for o in self.config[x]['options']]) + r")"
+
     def saveConfigFile(self):
         with open(self.config_path, 'wb') as config_file:
             pickle.dump(self.config, config_file)
@@ -131,6 +153,8 @@ class ProjectHelper():
                 data[field] = self.app.ui['project_structure'][field + '_cb'].currentText()
             if field == 'frame_rate':
                 data['frame_rate_short'] = data['frame_rate'].replace('.', '')
+            elif field == 'asset_name':
+                data['asset_name'] = data['asset_name'].replace('.', '_').replace('-', '_').replace(' ', '_')
 
         # Convert project structure to filenames
         new_struct = {}
@@ -159,51 +183,68 @@ class ProjectHelper():
     def parseFilename(self, filename):
         data = self.default_project_data.copy()
 
-        # Get project code if exists
-        if not match(r"[\w]{3}_.*", filename):
-            return None
-        data['project_code'] = filename[:3]
-        filename = filename[4:]
+        # Get all filename patterns from project structure
+        filename_patterns = []
+        q = [self.project_structure]
+        while len(q):
+            curr_struct = q.pop(0)
 
-        # Get asset type
-        asset_type_options_regex = "|".join([o[0] for o in self.config['asset_type']['options']])
-        if not match("^(" + asset_type_options_regex + ").*", filename):
-            return None
-        data['asset_type'] = search("(" + asset_type_options_regex + ")", filename).group(1)
-        filename = filename[len(data['asset_type']) + 1:]
+            if type(curr_struct) is dict:
+                # If current directory contains directories, add them to queue
+                for lbl_format in curr_struct:
+                    q = [curr_struct[lbl_format]] + q
+            else:
+                # If current directory contains files, add them as sorted list
+                filename_patterns += [x.format(**self.field_rules) for x in curr_struct]
+        filename_patterns.sort(key=lambda x: -len(x))
 
-        # Find project type from asset type
-        for at, pt in self.config['asset_type']['options']:
-            if at == data['asset_type']:
-                data['project_type'] = pt
-                break
-        if not 'project_type' in data:
-            return None
+        found = False
+        for fp in filename_patterns:
+            m = match(fp, filename)
+            if m:
+                data['file_type'] = filename[-3:]
 
-        # Get asset name and dimension/video length
-        filename_parts = filename.split('_')
-        data['asset_name'] = filename_parts[0]
-        data['dimensions_length'] = filename_parts[1]
+                g = 1
+                data['project_code'] = m.group(g)
+                g += 1
+                data['asset_type'] = m.group(g)
+                g += 1
 
-        if (filename_parts[2] + filename_parts[3]).startswith('DiaScript'):
-            data['file_type'] = 'dia_script'
-            return data
-        elif filename_parts[2] in self.config['variation']['options']:
-            data['variation'] = filename_parts[2]
-            data['market_language'] = filename_parts[3][:-5]
-            data['resolution'] = filename_parts[4]
-            data['frame_rate_short']  = data['frame_rate'] = filename_parts[5]
-            if data['frame_rate_short'] == '2398':
-                data['frame_rate'] = '23.98'
-            data['file_type'] = 'mov_' + filename_parts[3][-4:].lower() + '_' + filename_parts[6].split('.')[0].lower()
-        else:
-            data['market_language'] = filename_parts[2]
-            data['frame_rate_short']  = data['frame_rate'] = filename_parts[3]
-            if data['frame_rate_short'] == '2398':
-                data['frame_rate'] = '23.98'
-            data['file_type'] = 'audio_' + filename_parts[5].split('-')[0].lower()
+                # Find project type from asset type
+                for at, pt in self.config['asset_type']['options']:
+                    if at == data['asset_type']:
+                        data['project_type'] = pt
+                        break
+                if not 'project_type' in data:
+                    return None
 
-        return data
+                data['asset_name'] = m.group(g)
+                g += 1
+                data['dimensions_length'] = m.group(g)
+                g += 1
+
+                if data['file_type'] == 'doc':
+                    break
+                elif data['file_type'] in ['mov', 'mp4']:
+                    data['variation'] = m.group(g)
+                    g += 1
+
+                data['market_language'] = m.group(g)
+                g += 1
+
+                if data['file_type'] in ['mov', 'mp4']:
+                    data['resolution'] = m.group(g)
+                    g += 1
+
+                data['frame_rate_short'] = m.group(g)
+                for fr in self.config['frame_rate']['options']:
+                    if fr.replace('.', '') == data['frame_rate_short']:
+                        data['frame_rate'] = fr
+                        break
+
+                found = True
+
+        return [None, data][found]
 
     def moveFilesFromExportDir(self, export_dir, destination_dir):
         messages = []

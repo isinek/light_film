@@ -23,7 +23,7 @@
 | market						| Primary country for asset to run in	| UK				|
 | language						| Language of video						| en				|
 | dubbed or subtitled			| Label to indicate if dubbing or subtitle has been applied	| OV |
-| texted or textless			| Details on text information for the creative asset | TXTD	|
+| texted or textless			| Details on text information for the creative asset 	| TXTD	|
 | resolution					| Video resolution for primary asset	| 1080x1080			|
 | frame rate					| Video frame rate for primary asset	| 23.98				|
 | format						| Video file type						| ProRes			|
@@ -65,7 +65,7 @@
 ## Working hours
 | Description	| Current	| Expected	|
 |---------------|-----------|-----------|
-| Meetings		| 	 4 h	| 	10 h	|
+| Meetings		| 	 8 h	| 	10 h	|
 | POC			| 	 5 h	| 	 5 h	|
-| Development	| 	28 h	| 	25 h	|
+| Development	| 	32 h	| 	25 h	|
 | Documentation	| 	 2 h	| 	 2 h	|
