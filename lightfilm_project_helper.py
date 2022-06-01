@@ -53,8 +53,8 @@ class ProjectHelper():
                 "{finals_dir}": {
                     "{project_code}_{dimensions_length}": {
                         "{project_code}_{dimensions_length}_{asset_name}": {
-                            "{project_code}_{project_type}_{dimensions_length}_{asset_name}": {
-                                "{project_code}_{asset_type}_{dimensions_length}_{asset_name}": {
+                            "{project_code}_{dimensions_length}_{asset_name}_{project_type}": {
+                                "{project_code}_{dimensions_length}_{asset_name}_{asset_type}": {
                                     "{frame_rate}fps": [
                                         "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_{frame_rate_short}_ProRes.mov",
                                         "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTL_{resolution}_{frame_rate_short}_ProRes.mov"
@@ -102,14 +102,6 @@ class ProjectHelper():
 
         with open(self.config_path, 'rb') as config_file:
             self.config = pickle.load(config_file)
-
-        for x in self.config:
-            if x in ['asset_type', 'resolution']:
-                self.field_rules[x] = r"(" + '|'.join([item[0] for item in self.config[x]['options']]) + r")"
-            else:
-                self.field_rules[x] = r"(" + '|'.join(self.config[x]['options']) + r")"
-                if x == 'frame_rate':
-                    self.field_rules['frame_rate_short'] = r"(" + '|'.join([o.replace('.', '') for o in self.config[x]['options']]) + r")"
 
     def saveConfigFile(self):
         with open(self.config_path, 'wb') as config_file:
@@ -202,6 +194,7 @@ class ProjectHelper():
         for fp in filename_patterns:
             m = match(fp, filename)
             if m:
+                found = True
                 data['file_type'] = filename[-3:]
 
                 g = 1
@@ -242,7 +235,7 @@ class ProjectHelper():
                         data['frame_rate'] = fr
                         break
 
-                found = True
+                break
 
         return [None, data][found]
 
@@ -387,6 +380,14 @@ class Projectapp(QMainWindow):
             self.projectTypeSelectionChanged(self.ui['project_structure']['project_type_cb'].currentText())
         elif self.ui['project_structure']['asset_type_cb'].count():
             self.assetTypeSelectionChanged(self.ui['project_structure']['asset_type_cb'].currentText())
+
+        for x in self.helper.config:
+            if x in ['asset_type', 'resolution']:
+                self.helper.field_rules[x] = r"(" + '|'.join([item[0] for item in self.helper.config[x]['options']]) + r")"
+            else:
+                self.helper.field_rules[x] = r"(" + '|'.join(self.helper.config[x]['options']) + r")"
+                if x == 'frame_rate':
+                    self.helper.field_rules['frame_rate_short'] = r"(" + '|'.join([o.replace('.', '') for o in self.helper.config[x]['options']]) + r")"
 
     #########################
     # Project Structure tab #
