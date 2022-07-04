@@ -9,7 +9,7 @@ import pickle
 
 from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QTabWidget, QFileDialog, QMessageBox
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QScrollArea
-from PyQt5.QtWidgets import QLabel, QLineEdit, QComboBox, QPushButton, QListWidget, QListWidgetItem
+from PyQt5.QtWidgets import QLabel, QLineEdit, QComboBox, QPushButton, QListWidget, QListWidgetItem, QCheckBox
 from PyQt5.QtCore import Qt
 
 
@@ -192,7 +192,7 @@ class ProjectHelper():
 
         found = False
         for fp in filename_patterns:
-            m = match(fp, filename)
+            m = match(fp, filename.replace('_clean', ''))
             if m:
                 found = True
                 data['file_type'] = filename[-3:]
@@ -239,7 +239,7 @@ class ProjectHelper():
 
         return [None, data][found]
 
-    def moveFilesFromExportDir(self, export_dir, destination_dir):
+    def moveFilesFromExportDir(self, export_dir, destination_dir, only_directories):
         messages = []
         if not exists(export_dir):
             messages += [('Export directory does not exist!', ERROR)]
@@ -286,10 +286,15 @@ class ProjectHelper():
                                 if not file_path in paths:
                                     paths += [file_path]
 
+            if only_directories:
+                continue
+
             path = None
             for p in paths:
                 if export_filename == p.split('/')[-1]:
                     path = p
+                elif export_filename.replace('_clean', '') == p.split('/')[-1]:
+                    path = '/'.join(p.split('/')[:-1] + [export_filename])
                     break
 
             if path is None:
@@ -302,24 +307,36 @@ class ProjectHelper():
                 qm = QMessageBox()
                 overwrite_file = qm.question(self.app, '', f"File {path} already exist!\n Do you want to overwrite it?", qm.Yes | qm.No)
 
-            # Move file or print message
-            if not exists(path):
-                rename(export_file, path)
-                messages += [(f"File {export_filename} moved to {path}", INFO)]
-                self.log(messages[-1][0], messages[-1][1])
-            elif exists(path) and overwrite_file == qm.Yes:
-                replace(export_file, path)
-                messages += [(f"File {export_filename} overwrited {path}", INFO)]
-                self.log(messages[-1][0], messages[-1][1])
-            else:
-                messages += [(f"File {export_filename} was not moved!", ERROR)]
-                self.log(messages[-1][0], messages[-1][1])
+            while True:
+                try:
+                    # Try to move file or print message
+                    if not exists(path):
+                        rename(export_file, path)
+                        messages += [(f"File {export_filename} moved to {path}", INFO)]
+                        self.log(messages[-1][0], messages[-1][1])
+                        break
+                    elif exists(path) and overwrite_file == qm.Yes:
+                        replace(export_file, path)
+                        messages += [(f"File {export_filename} overwrited {path}", INFO)]
+                        self.log(messages[-1][0], messages[-1][1])
+                        break
+                    else:
+                        messages += [(f"File {export_filename} was not moved!", ERROR)]
+                        self.log(messages[-1][0], messages[-1][1])
+                        break
+                except Exception as e:
+                    self.log(str(e), ERROR)
+                    qm = QMessageBox()
+                    try_again = qm.question(self.app, '', f"Error with moving file: {path}!\nWould you like to try again?", qm.Yes | qm.No)
+                    if try_again == qm.No:
+                        break
 
-        for p in paths:
-            curr_file = p.split('/')[-1]
-            if not curr_file in export_filenames:
-                messages += [(f"File {curr_file} is part of the project, but was not exported.", WARN)]
-                self.log(messages[-1][0], messages[-1][1])
+        if not only_directories:
+            for p in paths:
+                curr_file = p.split('/')[-1]
+                if not curr_file in export_filenames:
+                    messages += [(f"File {curr_file} is part of the project, but was not exported.", WARN)]
+                    self.log(messages[-1][0], messages[-1][1])
 
         return messages
 
@@ -572,6 +589,11 @@ class Projectapp(QMainWindow):
             input_layout.addWidget(btn, i, 2)
             self.ui['move_project'][item['id'] + '_btn'] = btn
 
+        # Create only directories checkbox
+        cb = QCheckBox('Create only directories')
+        self.ui['move_project']['only_directories_cb'] = cb
+        input_layout.addWidget(cb, len(inputs), 1)
+
         # Move files button
         btn = QPushButton('Move files')
         btn.clicked.connect(self.moveProject)
@@ -616,7 +638,7 @@ class Projectapp(QMainWindow):
             return
 
         # Move files
-        messages = self.helper.moveFilesFromExportDir(export_dir, project_root)
+        messages = self.helper.moveFilesFromExportDir(export_dir, project_root, self.ui['move_project']['only_directories_cb'].isChecked())
 
         # Write messages to message box after clearing
         message_box = self.ui['move_project']['messages']
