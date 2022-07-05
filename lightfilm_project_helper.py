@@ -49,30 +49,77 @@ class ProjectHelper():
         }
 
         self.project_structure = {
-            "{project_name}": {
-                "{finals_dir}": {
-                    "{project_code}_{dimensions_length}": {
-                        "{project_code}_{dimensions_length}_{asset_name}": {
-                            "{project_code}_{dimensions_length}_{asset_name}_{project_type}": {
-                                "{project_code}_{dimensions_length}_{asset_name}_{asset_type}": {
-                                    "{frame_rate}fps": [
-                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_{frame_rate_short}_ProRes.mov",
-                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTL_{resolution}_{frame_rate_short}_ProRes.mov"
-                                    ],
-                                    "{audio_splits_dir}": [
-                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Dials-1dBTP.wav",
-                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_FX-1dBTP.wav",
-                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Mix-1dBTP.wav",
-                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Music-1dBTP.wav",
-                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Narr-1dBTP.wav"
-                                    ],
-                                    "{dia_scripts_dir}": [
-                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_Dia_Script.doc"
-                                    ],
-                                    "{gfx_project_dir}": [],
-                                    "{ref_file_dir}": [
-                                        "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_{frame_rate_short}_H264.mp4"
-                                    ]
+            'original_structure': {
+                "{project_name}": {
+                    "{finals_dir}": {
+                        "{project_code}_{dimensions_length}": {
+                            "{project_code}_{dimensions_length}_{asset_name}": {
+                                "{project_code}_{dimensions_length}_{asset_name}_{project_type}": {
+                                    "{project_code}_{dimensions_length}_{asset_name}_{asset_type}": {
+                                        "{frame_rate}fps": [
+                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_{frame_rate_short}_ProRes.mov",
+                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTL_{resolution}_{frame_rate_short}_ProRes.mov"
+                                        ],
+                                        "{audio_splits_dir}": [
+                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Dials-1dBTP.wav",
+                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_FX-1dBTP.wav",
+                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Mix-1dBTP.wav",
+                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Music-1dBTP.wav",
+                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Narr-1dBTP.wav"
+                                        ],
+                                        "{dia_scripts_dir}": [
+                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_Dia_Script.doc"
+                                        ],
+                                        "{gfx_project_dir}": [],
+                                        "{ref_file_dir}": [
+                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_{frame_rate_short}_H264.mp4"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            'tv_structure': {
+                "{project_name}": {
+                    "{finals_dir}": {
+                        "{project_code}_{dimensions_length}": {
+                            "{project_code}_{dimensions_length}_{asset_name}": {
+                                "{project_code}_{dimensions_length}_{asset_name}_{project_type}": {
+                                    "{project_code}_{dimensions_length}_{asset_name}_{asset_type}": {
+                                        "23.98fps": [
+                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_2398_ProRes.mov",
+                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTL_{resolution}_2398_ProRes.mov"
+                                        ],
+                                        "25fps": [
+                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_25_ProRes.mov",
+                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTL_{resolution}_25_ProRes.mov"
+                                        ],
+                                        "{audio_splits_dir}": {
+                                            '23.98fps': [
+                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_2398_ST_Dials-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_2398_ST_FX-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_2398_ST_Mix-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_2398_ST_Music-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_2398_ST_Narr-1dBTP.wav"
+                                            ],
+                                            '25fps': [
+                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_25_ST_Dials-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_25_ST_FX-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_25_ST_Mix-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_25_ST_Music-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_25_ST_Narr-1dBTP.wav"
+                                            ]
+                                        },
+                                        "{dia_scripts_dir}": [
+                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_Dia_Script.doc"
+                                        ],
+                                        "{gfx_project_dir}": [],
+                                        "{ref_file_dir}": [
+                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_{frame_rate_short}_H264.mp4"
+                                        ]
+                                    }
                                 }
                             }
                         }
@@ -150,7 +197,10 @@ class ProjectHelper():
 
         # Convert project structure to filenames
         new_struct = {}
-        q = [(self.project_structure, new_struct)]
+        if data['project_type'] == 'TV':
+            q = [(self.project_structure['tv_structure'], new_struct)]
+        else:
+            q = [(self.project_structure['original_structure'], new_struct)]
         while len(q):
             curr_struct, new_curr_struct = q.pop(0)
 
@@ -177,7 +227,7 @@ class ProjectHelper():
 
         # Get all filename patterns from project structure
         filename_patterns = []
-        q = [self.project_structure]
+        q = [self.project_structure['original_structure']]
         while len(q):
             curr_struct = q.pop(0)
 
@@ -264,10 +314,14 @@ class ProjectHelper():
                 self.log(messages[-1][0], messages[-1][1])
                 continue
 
+            project_structure = self.project_structure['original_structure']
+            if parsed_data['project_type'] == 'TV':
+                project_structure = self.project_structure['tv_structure']
+
             # If file type is mov, it should contain all data, so use it
             # to create project structure and directories
             if parsed_data['file_type'].startswith('mov'):
-                q = [(self.project_structure['{project_name}'], destination_dir)]
+                q = [(project_structure['{project_name}'], destination_dir)]
                 while len(q):
                     curr, p = q.pop(0)
 
@@ -480,6 +534,11 @@ class Projectapp(QMainWindow):
     def projectTypeSelectionChanged(self, value):
         self.ui['project_structure']['asset_type_cb'].clear()
         self.ui['project_structure']['asset_type_cb'].addItems([x[0] for x in self.helper.config['asset_type']['options'] if x[1] == value])
+
+        if (value == 'TV'):
+            self.ui['project_structure']['frame_rate_cb'].setEnabled(False)
+        else:
+            self.ui['project_structure']['frame_rate_cb'].setEnabled(True)
 
     def assetTypeSelectionChanged(self, value):
         self.ui['project_structure']['resolution_cb'].clear()
