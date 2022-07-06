@@ -67,5 +67,5 @@
 |---------------|-----------|-----------|
 | Meetings		| 	 8 h	| 	10 h	|
 | POC			| 	 5 h	| 	 5 h	|
-| Development	| 	35 h	| 	25 h	|
+| Development	| 	36 h	| 	25 h	|
 | Documentation	| 	 2 h	| 	 2 h	|

@@ -237,12 +237,11 @@ class ProjectHelper():
                     q = [curr_struct[lbl_format]] + q
             else:
                 # If current directory contains files, add them as sorted list
-                filename_patterns += [x.format(**self.field_rules) for x in curr_struct]
-        filename_patterns.sort(key=lambda x: -len(x))
+                filename_patterns += [(x.format(**self.field_rules), x) for x in curr_struct]
 
         found = False
-        for fp in filename_patterns:
-            m = match(fp, filename.replace('_clean', ''))
+        for rule, patt in filename_patterns:
+            m = match(rule, filename.replace('_clean', ''))
             if m:
                 found = True
                 data['file_type'] = filename[-3:]
@@ -284,7 +283,6 @@ class ProjectHelper():
                     if fr.replace('.', '') == data['frame_rate_short']:
                         data['frame_rate'] = fr
                         break
-
                 break
 
         return [None, data][found]
@@ -318,38 +316,33 @@ class ProjectHelper():
             if parsed_data['project_type'] == 'TV':
                 project_structure = self.project_structure['tv_structure']
 
-            # If file type is mov, it should contain all data, so use it
-            # to create project structure and directories
-            if parsed_data['file_type'].startswith('mov'):
-                q = [(project_structure['{project_name}'], destination_dir)]
-                while len(q):
-                    curr, p = q.pop(0)
-
-                    for lbl_format in curr:
-                        curr_path = f"{p}/{lbl_format.format(**parsed_data)}"
-                        if not exists(curr_path):
-                            mkdir(curr_path)
-                            messages += [('New directory created: ' + curr_path, INFO)]
-                            self.log(messages[-1][0], messages[-1][1])
-
-                        if type(curr[lbl_format]) is dict:
-                            q = [(curr[lbl_format], curr_path)] + q
-                        else:
-                            for filename_format in curr[lbl_format]:
-                                file_path = f"{curr_path}/{filename_format.format(**parsed_data)}"
-                                if not file_path in paths:
-                                    paths += [file_path]
-
-            if only_directories:
-                continue
-
+            # Create directory structure needed for file to copy
+            q = [(project_structure['{project_name}'], destination_dir)]
             path = None
-            for p in paths:
-                if export_filename == p.split('/')[-1]:
-                    path = p
-                elif export_filename.replace('_clean', '') == p.split('/')[-1]:
-                    path = '/'.join(p.split('/')[:-1] + [export_filename])
-                    break
+            while len(q):
+                curr, p = q.pop(0)
+
+                for lbl_format in curr:
+                    curr_path = f"{p}/{lbl_format.format(**parsed_data)}"
+                    if not exists(curr_path):
+                        mkdir(curr_path)
+                        messages += [('New directory created: ' + curr_path, INFO)]
+                        self.log(messages[-1][0], messages[-1][1])
+
+                    if type(curr[lbl_format]) is dict:
+                        q = [(curr[lbl_format], curr_path)] + q
+                    elif not only_directories:
+                        for filename_format in curr[lbl_format]:
+                            try:
+                                file_path = f"{curr_path}/{filename_format.format(**parsed_data)}"
+                                if export_filename == file_path.split('/')[-1]:
+                                    path = file_path
+                                    break
+                                elif export_filename.replace('_clean', '') == file_path.split('/')[-1]:
+                                    path = '/'.join(file_path.split('/')[:-1] + [export_filename])
+                                    break
+                            except:
+                                continue
 
             if path is None:
                 messages += [(f"Can't find a project for file {export_file}!", WARN)]
