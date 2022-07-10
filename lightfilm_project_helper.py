@@ -301,7 +301,6 @@ class ProjectHelper():
         # Get all files that need to be moved
         export_files = sorted(glob(export_dir + '/*'), key=lambda x: -len(x))
         export_filenames = []
-        paths = []
         for export_file in export_files:
             # Parse filename
             export_filename = export_file.split('/')[-1]
@@ -335,10 +334,7 @@ class ProjectHelper():
                         for filename_format in curr[lbl_format]:
                             try:
                                 file_path = f"{curr_path}/{filename_format.format(**parsed_data)}"
-                                if export_filename == file_path.split('/')[-1]:
-                                    path = file_path
-                                    break
-                                elif export_filename.replace('_clean', '') == file_path.split('/')[-1]:
+                                if export_filename.replace('_clean', '') == file_path.split('/')[-1]:
                                     path = '/'.join(file_path.split('/')[:-1] + [export_filename])
                                     break
                             except:
@@ -377,13 +373,6 @@ class ProjectHelper():
                     try_again = qm.question(self.app, '', f"Error with moving file: {path}!\nWould you like to try again?", qm.Yes | qm.No)
                     if try_again == qm.No:
                         break
-
-        if not only_directories:
-            for p in paths:
-                curr_file = p.split('/')[-1]
-                if not curr_file in export_filenames:
-                    messages += [(f"File {curr_file} is part of the project, but was not exported.", WARN)]
-                    self.log(messages[-1][0], messages[-1][1])
 
         return messages
 
