@@ -1,5 +1,5 @@
 import sys
-from datetime import datetime
+from datetime import datetime, date
 from os import mkdir, rename, replace
 from os.path import exists
 from glob import glob
@@ -128,7 +128,7 @@ class ProjectHelper():
             }
         }
 
-        self.log_path = './log.log'
+        self.log_path = './log_' + str(date.today().strftime("%Y%m%d")) + '.log'
 
     def log(self, msg, log_level):
         log_level_str = 'INFO'
@@ -298,6 +298,9 @@ class ProjectHelper():
         if len(messages):
             return messages
 
+        self.log('Export directory: %s' % export_dir, INFO)
+        self.log('Destination directory: %s' % destination_dir, INFO)
+
         # Get all files that need to be moved
         export_files = sorted(glob(export_dir + '/*'), key=lambda x: -len(x))
         export_filenames = []
@@ -377,7 +380,7 @@ class ProjectHelper():
         return messages
 
 
-class Projectapp(QMainWindow):
+class ProjectApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.title = 'LightFilm Project Helper'
@@ -607,8 +610,8 @@ class Projectapp(QMainWindow):
         input_layout = QGridLayout()
 
         inputs = [
-            {'label': 'Export directory:',  'id': 'export_directory',   'widget': QLineEdit},
-            {'label': 'Project root:',  'id': 'project_root',   'widget': QLineEdit}
+            {'label': 'Export directory:',  'id': 'export_directory',   'widget': QLineEdit,    'default': '/Volumes/BlueRaven/FROM CLIENT/UNIVERSAL/NOPE/RENDERS/Project_Helper_Test/Export folder'},
+            {'label': 'Project root:',  'id': 'project_root',   'widget': QLineEdit, 'default': '/Volumes/BlueRaven/FROM BLUE RAVEN'}
         ]
 
         for i, item in enumerate(inputs):
@@ -659,17 +662,19 @@ class Projectapp(QMainWindow):
         self.tabs.addTab(widget, 'Move Project')
 
     def openFileDialog(self):
-        directory = QFileDialog.getExistingDirectory(self, 'Find directory', '')
 
-        if directory:
-            for btn_id in self.ui['move_project']:
-                # Find clicked button
-                if not self.ui['move_project'][btn_id] is self.sender():
-                    continue
+        for btn_id in self.ui['move_project']:
+            # Find clicked button
+            if not self.ui['move_project'][btn_id] is self.sender():
+                continue
 
-                textbox_id = btn_id.replace('_btn', '_tb')
+            textbox_id = btn_id.replace('_btn', '_tb')
+            directory = QFileDialog.getExistingDirectory(self, 'Find directory', self.ui['move_project'][textbox_id].text())
+
+            if directory:
                 self.ui['move_project'][textbox_id].setText(directory)
-                break
+
+            break
 
     def moveProject(self):
         export_dir = self.ui['move_project']['export_directory_tb'].text()
@@ -814,7 +819,7 @@ class Projectapp(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
 
-    window = Projectapp()
+    window = ProjectApp()
     window.show()
     window.raise_()
 
