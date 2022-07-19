@@ -3,12 +3,12 @@ from datetime import datetime, date
 from os import mkdir, rename, replace
 from os.path import exists
 from glob import glob
-from re import match, search
+from re import match, search, sub
 from distutils.log import ERROR, INFO, WARN
 import pickle
 
 from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QTabWidget, QFileDialog, QMessageBox
-from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QScrollArea
+from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QScrollArea, QSpacerItem
 from PyQt5.QtWidgets import QLabel, QLineEdit, QComboBox, QPushButton, QListWidget, QListWidgetItem, QCheckBox
 from PyQt5.QtCore import Qt
 
@@ -241,7 +241,7 @@ class ProjectHelper():
 
         found = False
         for rule, patt in filename_patterns:
-            m = match(rule, filename.replace('_clean', ''))
+            m = match(rule, sub(r"_[Cc]lean", '', filename))
             if m:
                 found = True
                 data['file_type'] = filename[-3:]
@@ -286,6 +286,67 @@ class ProjectHelper():
                 break
 
         return [None, data][found]
+
+    def createDirectoryStructure(self, destination_dir):
+        messages = []
+        if not exists(destination_dir):
+            messages += [('Destination directory does not exist!', ERROR)]
+            self.log(messages[-1][0], messages[-1][1])
+        if len(messages):
+            return False
+
+        self.log('Destination directory: %s' % destination_dir, INFO)
+
+        data = self.default_project_data.copy()
+        data_fields =  [
+            'project_name',
+            'project_code',
+            'project_type',
+            'asset_name',
+            'asset_type',
+            'dimensions_length',
+            'variation',
+            'market_language',
+            'resolution',
+            'frame_rate',
+            'frame_rate_short'
+        ]
+        # Get data from all textboxes and combo boxes
+        for field in data_fields:
+            if field + '_tb' in self.app.ui['project_structure']:
+                data[field] = self.app.ui['project_structure'][field + '_tb'].text()
+            elif field + '_cb' in self.app.ui['project_structure']:
+                data[field] = self.app.ui['project_structure'][field + '_cb'].currentText()
+            if field == 'frame_rate':
+                data['frame_rate_short'] = data['frame_rate'].replace('.', '')
+            elif field == 'asset_name':
+                data['asset_name'] = data['asset_name'].replace('.', '_').replace('-', '_').replace(' ', '_')
+
+        project_structure = self.project_structure['original_structure']
+        if data['project_type'] == 'TV':
+            project_structure = self.project_structure['tv_structure']
+
+        # Create directory structure needed for file to copy
+        q = [(project_structure['{project_name}'], f"{destination_dir}/{data['project_name']}")]
+        if not exists(q[0][1]):
+            mkdir(q[0][1])
+            messages += [('New directory created: ' + q[0][1], INFO)]
+            self.log(messages[-1][0], messages[-1][1])
+
+        while len(q):
+            curr, p = q.pop(0)
+
+            for lbl_format in curr:
+                curr_path = f"{p}/{lbl_format.format(**data)}"
+                if not exists(curr_path):
+                    mkdir(curr_path)
+                    messages += [('New directory created: ' + curr_path, INFO)]
+                    self.log(messages[-1][0], messages[-1][1])
+
+                if type(curr[lbl_format]) is dict:
+                    q = [(curr[lbl_format], curr_path)] + q
+
+        return True
 
     def moveFilesFromExportDir(self, export_dir, destination_dir, only_directories):
         messages = []
@@ -337,7 +398,7 @@ class ProjectHelper():
                         for filename_format in curr[lbl_format]:
                             try:
                                 file_path = f"{curr_path}/{filename_format.format(**parsed_data)}"
-                                if export_filename.replace('_clean', '') == file_path.split('/')[-1]:
+                                if sub(r"_[Cc]lean", '', export_filename) == file_path.split('/')[-1]:
                                     path = '/'.join(file_path.split('/')[:-1] + [export_filename])
                                     break
                             except:
@@ -497,12 +558,27 @@ class ProjectApp(QMainWindow):
 
         # Clear projects button
         button = QPushButton('Clear projects')
-        button.setDefault(True)
         button.clicked.connect(self.clearProjectStructure)
-        left_layout.addWidget(button, len(inputs) + 1, 0, 1, 2)
+        left_layout.addWidget(button, left_layout.rowCount(), 0, 1, 2)
 
         left_layout.setRowStretch(left_layout.rowCount(), 1)
         layout.addLayout(left_layout)
+
+        # Export directory label and button
+        textbox = QLineEdit()
+        textbox.setText('/Volumes/BlueRaven/FROM BLUE RAVEN')
+        self.ui['project_structure']['destination_directory_tb'] = textbox
+        left_layout.addWidget(textbox, left_layout.rowCount(), 0)
+
+        # File dialog button
+        button = QPushButton('Search...')
+        button.clicked.connect(self.openFileDialog)
+        self.ui['project_structure']['destination_directory_btn'] = button
+        left_layout.addWidget(button, left_layout.rowCount() - 1, 1)
+
+        button = QPushButton('Create directory structure')
+        button.clicked.connect(self.createDirectoryStructure)
+        left_layout.addWidget(button, left_layout.rowCount(), 0, 1, 2)
 
         # Making right layout scrollable
         widget = QWidget()
@@ -515,6 +591,17 @@ class ProjectApp(QMainWindow):
         widget = QWidget()
         widget.setLayout(layout)
         self.tabs.addTab(widget, 'Project Structure')
+
+    def createDirectoryStructure(self):
+        if not self.validateProjectStructureFields():
+            return
+
+        destination_dir = self.ui['project_structure']['destination_directory_tb'].text()
+        result = self.helper.createDirectoryStructure(destination_dir)
+        if result:
+            QMessageBox.about(self, 'Success', 'Directories successfuly created!')
+        else:
+            QMessageBox.about(self, 'Error', 'Error occurred while creating directories!')
 
     def projectTypeSelectionChanged(self, value):
         self.ui['project_structure']['asset_type_cb'].clear()
@@ -662,7 +749,6 @@ class ProjectApp(QMainWindow):
         self.tabs.addTab(widget, 'Move Project')
 
     def openFileDialog(self):
-
         for btn_id in self.ui['move_project']:
             # Find clicked button
             if not self.ui['move_project'][btn_id] is self.sender():
@@ -674,7 +760,20 @@ class ProjectApp(QMainWindow):
             if directory:
                 self.ui['move_project'][textbox_id].setText(directory)
 
-            break
+            return
+
+        for btn_id in self.ui['project_structure']:
+            # Find clicked button
+            if not self.ui['project_structure'][btn_id] is self.sender():
+                continue
+
+            textbox_id = btn_id.replace('_btn', '_tb')
+            directory = QFileDialog.getExistingDirectory(self, 'Find directory', self.ui['project_structure'][textbox_id].text())
+
+            if directory:
+                self.ui['project_structure'][textbox_id].setText(directory)
+
+            return
 
     def moveProject(self):
         export_dir = self.ui['move_project']['export_directory_tb'].text()
