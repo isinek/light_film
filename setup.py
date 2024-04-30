@@ -2,7 +2,7 @@
 py2app/py2exe build script for lightfilm_project_helper.
 
 Usage (Mac OS X):
-    python setup.py py2app
+    python3 setup.py py2app
 """
 
 from setuptools import setup

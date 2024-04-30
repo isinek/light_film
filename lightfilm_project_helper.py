@@ -20,7 +20,7 @@ class ProjectHelper():
         self.config = {
             'project_type': {'label': 'Project type:',  'options': []},
             'asset_type':   {'label': 'Asset type:',    'options': []},
-            'dimensions_length': {'label': 'Dimensions/video length:',    'options': []},
+            'duration':     {'label': 'Duration:',      'options': []},
             'variation':    {'label': 'Variation:',     'options': []},
             'resolution':   {'label': 'Resolution:',    'options': []},
             'frame_rate':   {'label': 'Frame rate:',    'options': []}
@@ -32,7 +32,7 @@ class ProjectHelper():
             'project_type': None,
             'asset_name': r"([a-zA-Z0-9\s\-\_]+)",
             'asset_type': None,
-            'dimensions_length': None,
+            'duration': None,
             'variation': None,
             'market_language': r"([a-zA-Z\-]+)",
             'resolution': None,
@@ -42,8 +42,8 @@ class ProjectHelper():
 
         self.default_project_data = {
             'finals_dir': 'FINALS',
-            'audio_splits_dir': 'Audio_splits',
-            'dia_scripts_dir': 'Dia_scripts',
+            'audio_splits_dir': 'Audio_Splits',
+            'script_dir': 'Script',
             'gfx_project_dir': 'GFX_Project',
             'ref_file_dir': 'Ref_File'
         }
@@ -52,31 +52,25 @@ class ProjectHelper():
             'original_structure': {
                 "{project_name}": {
                     "{finals_dir}": {
-                        "{project_code}_{dimensions_length}": {
-                            "{project_code}_{dimensions_length}_{asset_name}": {
-                                "{project_code}_{dimensions_length}_{asset_name}_{project_type}": {
-                                    "{project_code}_{dimensions_length}_{asset_name}_{asset_type}": {
-                                        "{frame_rate}fps": [
-                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_{frame_rate_short}_ProRes.mov",
-                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTL_{resolution}_{frame_rate_short}_ProRes.mov"
-                                        ],
-                                        "{audio_splits_dir}": [
-                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Dials-1dBTP.wav",
-                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_FX-1dBTP.wav",
-                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Mix-1dBTP.wav",
-                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Music-1dBTP.wav",
-                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_{frame_rate_short}_ST_Narr-1dBTP.wav"
-                                        ],
-                                        "{dia_scripts_dir}": [
-                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_Dia_Script.doc"
-                                        ],
-                                        "{gfx_project_dir}": [],
-                                        "{ref_file_dir}": [
-                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_{frame_rate_short}_H264.mp4"
-                                        ]
-                                    }
-                                }
-                            }
+                        "{duration}_{asset_name}_{asset_type}": {
+                            "{frame_rate_short}fps": [
+                                "{project_code}_{project_type}-{asset_type}_{variation}_{duration}s_{market_language}-TXTD_{resolution}_{frame_rate_short}_ProRes.mov",
+                                "{project_code}_{project_type}-{asset_type}_{variation}_{duration}s_{market_language}-TXTL_{resolution}_{frame_rate_short}_ProRes.mov"
+                            ],
+                            "{audio_splits_dir}": [
+                                "{project_code}_{project_type}-{asset_type}_{duration}_{market_language}_{frame_rate_short}_ST_Dials-1dBTP.wav",
+                                "{project_code}_{project_type}-{asset_type}_{duration}_{market_language}_{frame_rate_short}_ST_FX-1dBTP.wav",
+                                "{project_code}_{project_type}-{asset_type}_{duration}_{market_language}_{frame_rate_short}_ST_Mix-1dBTP.wav",
+                                "{project_code}_{project_type}-{asset_type}_{duration}_{market_language}_{frame_rate_short}_ST_Music-1dBTP.wav",
+                                "{project_code}_{project_type}-{asset_type}_{duration}_{market_language}_{frame_rate_short}_ST_Narr-1dBTP.wav"
+                            ],
+                            "{script_dir}": [
+                                "{project_code}_{duration}_{asset_name}_{asset_type}_Script.doc"
+                            ],
+                            "{gfx_project_dir}": [],
+                            "{ref_file_dir}": [
+                                "{project_code}_{project_type}-{asset_type}_{variation}_{duration}s_{market_language}-TXTD_{resolution}_{frame_rate_short}__H264.mp4"
+                            ]
                         }
                     }
                 }
@@ -84,40 +78,40 @@ class ProjectHelper():
             'tv_structure': {
                 "{project_name}": {
                     "{finals_dir}": {
-                        "{project_code}_{dimensions_length}": {
-                            "{project_code}_{dimensions_length}_{asset_name}": {
-                                "{project_code}_{dimensions_length}_{asset_name}_{project_type}": {
-                                    "{project_code}_{dimensions_length}_{asset_name}_{asset_type}": {
+                        "{project_code}_{duration}": {
+                            "{project_code}_{duration}_{asset_name}": {
+                                "{project_code}_{duration}_{asset_name}_{project_type}": {
+                                    "{project_code}_{duration}_{asset_name}_{asset_type}": {
                                         "23.98fps": [
-                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_2398_ProRes.mov",
-                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTL_{resolution}_2398_ProRes.mov"
+                                            "{project_code}_{asset_type}_{asset_name}_{duration}_{variation}_{market_language}-TXTD_{resolution}_2398_ProRes.mov",
+                                            "{project_code}_{asset_type}_{asset_name}_{duration}_{variation}_{market_language}-TXTL_{resolution}_2398_ProRes.mov"
                                         ],
                                         "25fps": [
-                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_25_ProRes.mov",
-                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTL_{resolution}_25_ProRes.mov"
+                                            "{project_code}_{asset_type}_{asset_name}_{duration}_{variation}_{market_language}-TXTD_{resolution}_25_ProRes.mov",
+                                            "{project_code}_{asset_type}_{asset_name}_{duration}_{variation}_{market_language}-TXTL_{resolution}_25_ProRes.mov"
                                         ],
                                         "{audio_splits_dir}": {
                                             '23.98fps': [
-                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_2398_ST_Dials-1dBTP.wav",
-                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_2398_ST_FX-1dBTP.wav",
-                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_2398_ST_Mix-1dBTP.wav",
-                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_2398_ST_Music-1dBTP.wav",
-                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_2398_ST_Narr-1dBTP.wav"
+                                                "{project_code}_{asset_type}_{asset_name}_{duration}_{market_language}_2398_ST_Dials-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{duration}_{market_language}_2398_ST_FX-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{duration}_{market_language}_2398_ST_Mix-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{duration}_{market_language}_2398_ST_Music-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{duration}_{market_language}_2398_ST_Narr-1dBTP.wav"
                                             ],
                                             '25fps': [
-                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_25_ST_Dials-1dBTP.wav",
-                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_25_ST_FX-1dBTP.wav",
-                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_25_ST_Mix-1dBTP.wav",
-                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_25_ST_Music-1dBTP.wav",
-                                                "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{market_language}_25_ST_Narr-1dBTP.wav"
+                                                "{project_code}_{asset_type}_{asset_name}_{duration}_{market_language}_25_ST_Dials-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{duration}_{market_language}_25_ST_FX-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{duration}_{market_language}_25_ST_Mix-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{duration}_{market_language}_25_ST_Music-1dBTP.wav",
+                                                "{project_code}_{asset_type}_{asset_name}_{duration}_{market_language}_25_ST_Narr-1dBTP.wav"
                                             ]
                                         },
-                                        "{dia_scripts_dir}": [
-                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_Dia_Script.doc"
+                                        "{script_dir}": [
+                                            "{project_code}_{asset_type}_{asset_name}_{duration}_Dia_Script.doc"
                                         ],
                                         "{gfx_project_dir}": [],
                                         "{ref_file_dir}": [
-                                            "{project_code}_{asset_type}_{asset_name}_{dimensions_length}_{variation}_{market_language}-TXTD_{resolution}_{frame_rate_short}_H264.mp4"
+                                            "{project_code}_{asset_type}_{asset_name}_{duration}_{variation}_{market_language}-TXTD_{resolution}_{frame_rate_short}_H264.mp4"
                                         ]
                                     }
                                 }
@@ -177,7 +171,7 @@ class ProjectHelper():
             'project_type',
             'asset_name',
             'asset_type',
-            'dimensions_length',
+            'duration',
             'variation',
             'market_language',
             'resolution',
@@ -262,7 +256,7 @@ class ProjectHelper():
 
                 data['asset_name'] = m.group(g)
                 g += 1
-                data['dimensions_length'] = m.group(g)
+                data['duration'] = m.group(g)
                 g += 1
 
                 if data['file_type'] == 'doc':
@@ -304,7 +298,7 @@ class ProjectHelper():
             'project_type',
             'asset_name',
             'asset_type',
-            'dimensions_length',
+            'duration',
             'variation',
             'market_language',
             'resolution',
@@ -464,6 +458,7 @@ class ProjectApp(QMainWindow):
         self.initProjectStructureUI()
         self.initMoveProjectUI()
         self.initConfigUI()
+        self.initVersionUI()
 
         self.helper.loadConfigFile()
         self.refreshLists()
@@ -526,7 +521,7 @@ class ProjectApp(QMainWindow):
             {'label': 'Project type:',  'id': 'project_type_cb',    'widget': QComboBox,    'action': self.projectTypeSelectionChanged},
             {'label': 'Asset name:',    'id': 'asset_name_tb',      'widget': QLineEdit},
             {'label': 'Asset type:',    'id': 'asset_type_cb',      'widget': QComboBox,    'action': self.assetTypeSelectionChanged},
-            {'label': 'Dimensions/video length:', 'id': 'dimensions_length_cb', 'widget': QComboBox},
+            {'label': 'Duration:',      'id': 'duration_cb',        'widget': QComboBox},
             {'label': 'Variation:',     'id': 'variation_cb',       'widget': QComboBox},
             {'label': 'Market and language:', 'id': 'market_language_tb',       'widget': QLineEdit, 'default': 'OV-en-OV'},
             {'label': 'Resolution:',    'id': 'resolution_cb',      'widget': QComboBox},
@@ -913,6 +908,22 @@ class ProjectApp(QMainWindow):
                     self.ui['config'][textbox_id].setText(item.text())
             break
         self.refreshLists()
+
+    ##############
+    # Config tab #
+    ##############
+    def initVersionUI(self):
+        # Set layout
+        layout = QVBoxLayout()
+        label = QLabel()
+        label.setText('Version: v1.2')
+        label.setAlignment(Qt.AlignTop)
+        layout.addWidget(label)
+
+        # Add new tab
+        widget = QWidget()
+        widget.setLayout(layout)
+        self.tabs.addTab(widget, 'Version')
 
 
 if __name__ == '__main__':

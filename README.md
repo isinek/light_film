@@ -8,9 +8,62 @@
  * Copy/rename project
  * Generate CSV file to check if everything is exported corectly
 
-## Project data
+## Project Structure and Naming Conventions
+### Main Folder Naming – Asset Name
+#### TV
+<TRT>_<Asset_Name_In_Camel_Case>
+Example: 15_Treasure_Island_Cutdown
 
-**Filename example**: `TR2_NewsfeedSpots_Treat_30s_ComingSoon_UK_en_OV_TXTD_1080x1080_2398_ProRes`
+#### Social
+<TRT>_<Asset_Name_In_Camel_Case>_<SizeDimension>_<AssetType>
+ * TRT always comes first
+ * Asset name with underscores in camel case; if it is a Revised or Cutdown that is usually at the end of the asset name
+ * Dynamic after asset name, if it is an asset with dynamic subs on it
+ * Size Dimension, if it is not 16x9 (which is default for TV, YT Bumper, and YT Trueview)
+ * Asset Type, Either Vertical, Newsfeed, Vertical Tiktok, YT Trueview, or YT Bumper.
+
+Example: 15_Treasure_Island_Cutdown_9x16_Vertical
+Example: 15_Treasure_Island_Cutdown_4x5_Newsfeed
+Example: 15_Treasure_Island_Cutdown_1x1_Newsfeed
+Example: 15_Treasure_Island_Cutdown_Dynamic_9x16_Vertical
+Example: 15_Treasure_Island_Cutdown_Dynamic_9x16_Vertical_ Tiktok
+Example: 15_Treasure_Island_Cutdown_YT_Trueview
+Example: 06_Treasure_Island_Cutdown_YT_Bumper
+
+### Internal Folder Naming
+Each asset should contain the following folders:
+ * Ref_File
+   * Contains the reference file, an .mp4
+ * Audio_Splits
+   * Contains all audio splits and mixes
+ * GFX_Project
+   * Contains the Graphics Project and any additional footage and notes
+ * 2398fps
+   * Contains the Texted, Textless, and Textless Clean (Textless clean for Social Verticals only, should be clean backplate with no Legals/Logos)
+ * 25fps
+   * Contains the Texted and Textless, for TV only
+ * Script
+   * Contains script for asset
+
+### Filename conventions
+The filename of the Texted and Textless Master files should follow this convention:
+
+ * Filenaming convention: 
+   * Filmcode_Assettype-Dimension_SpotName_Duration _Language_Texted/Textless_Resolution_Framerate_File Type
+ * For a Dynamic Vertical:
+   * Example: ARG_SOCIAL-9x16_Dynamic_ByYourSide_15s_OV-en-OV-TXT_1080x1920_2398_ProRes.mov
+ * For a regular Vertical:
+   * Example: ARG_SOCIAL-9x16_ByYourSide_15s_OV-en-OV-TXT_1080x1920_2398_ProRes.mov
+ * For a Dynamic Tiktok Vertical
+   * Example: ARG_SOCIAL-9x16_Dynamic_Tiktok_ByYourSide_15s_OV-en-OV-TXT_1080x1920_2398_ProRes.mov
+ * For a regular Tiktok Vertical
+   * Example: ARG_SOCIAL-9x16_Tiktok_ByYourSide_15s_OV-en-OV-TXTD_1080x1920_2398_ProRes.mov
+ * For a 4x5 Newsfeed
+   * Example: ARG_SOCIAL-4x5_Dynamic_ByYourSide_15s_OV-en-OV-TXT_1080x1350_2398_ProRes.mov
+
+Notes:
+ * For the asset name, there are underscores when it is the folder convention, but for the filename.mov, there should be no underscores. Ie folder 15_Asset_Name versus file AssetName_15.mov
+ * Texted files would be TXT and Textless files would be TXTL
 
 | Entity						| Description							| Example			|
 |-------------------------------|---------------------------------------|-------------------|
@@ -29,43 +82,3 @@
 | format						| Video file type						| ProRes			|
 | local asset name				| Localised / translated asset name		| 					|
 
-## ~~Solution 1~~
- 1. Entering project data
- 2. Generate directory structure
- 3. Export video to generated directory
-
-### Pros
- * clear directory structure from the begining
- * if empty files are generated, there's no need to generate filenames again
-
-### Cons
- * search for file directory manually
- * only difference between empty and final video is file size
-
-## Solution 2
- 1. Entering project data
- 2. Export all videos with generated filenames to single directory
- 3. Generate directory structure from filenames and move files there
-
-### Pros
- * export everything to one place, no need to search for right directory
- * possible to generate directory structure for multiple projects at once
-
-### Cons
- * strict file naming rules
-
-## Open questions
- * Clearly define usage of - and _ in filenames
-	* `TR2_NewsfeedSpots_Treat_30s_ComingSoon_`**UK-en-OV-TXTD**`_1080x1080_2398_Prores_[Local]`
- * Tool preferences
-	* ~~Google sheet~~
-	* ~~script~~
-	* python app
-
-## Working hours
-| Description	| Current	| Expected	|
-|---------------|-----------|-----------|
-| Meetings		| 	 8 h	| 	10 h	|
-| POC			| 	 5 h	| 	 5 h	|
-| Development	| 	39 h	| 	25 h	|
-| Documentation	| 	 2 h	| 	 2 h	|
