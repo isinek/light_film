@@ -11,7 +11,7 @@ APP = ['lightfilm_project_helper.py']
 DATA_FILES = ['main.cfg']
 OPTIONS = {
     'argv_emulation': True,
-    'packages': ['glob', 're', 'distutils', 'pickle', 'PyQt5']
+    'packages': ['glob', 're', 'pickle', 'PyQt5']
 }
 
 setup(

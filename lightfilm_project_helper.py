@@ -4,7 +4,6 @@ from os import mkdir, rename, replace
 from os.path import exists
 from glob import glob
 from re import match, search, sub
-from distutils.log import ERROR, INFO, WARN
 import pickle
 
 from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QTabWidget, QFileDialog, QMessageBox
@@ -125,15 +124,9 @@ class ProjectHelper():
         self.log_path = './log_' + str(date.today().strftime("%Y%m%d")) + '.log'
 
     def log(self, msg, log_level):
-        log_level_str = 'INFO'
-        if log_level == ERROR:
-            log_level_str = 'ERROR'
-        if log_level == WARN:
-            log_level_str = 'WARNING'
-
         timestamp = 'T'.join(str(datetime.now()).split(' '))
         with open(self.log_path, 'a') as log_file:
-            log_file.write(f"[{timestamp}] {log_level_str}: {msg}\n")
+            log_file.write(f"[{timestamp}] {log_level}: {msg}\n")
 
     def loadConfigFile(self):
         # Create config file if it does not exist
@@ -284,12 +277,12 @@ class ProjectHelper():
     def createDirectoryStructure(self, destination_dir):
         messages = []
         if not exists(destination_dir):
-            messages += [('Destination directory does not exist!', ERROR)]
+            messages += [('Destination directory does not exist!', 'ERROR')]
             self.log(messages[-1][0], messages[-1][1])
         if len(messages):
             return False
 
-        self.log('Destination directory: %s' % destination_dir, INFO)
+        self.log('Destination directory: %s' % destination_dir, 'INFO')
 
         data = self.default_project_data.copy()
         data_fields =  [
@@ -324,7 +317,7 @@ class ProjectHelper():
         q = [(project_structure['{project_name}'], f"{destination_dir}/{data['project_name']}")]
         if not exists(q[0][1]):
             mkdir(q[0][1])
-            messages += [('New directory created: ' + q[0][1], INFO)]
+            messages += [('New directory created: ' + q[0][1], 'INFO')]
             self.log(messages[-1][0], messages[-1][1])
 
         while len(q):
@@ -334,7 +327,7 @@ class ProjectHelper():
                 curr_path = f"{p}/{lbl_format.format(**data)}"
                 if not exists(curr_path):
                     mkdir(curr_path)
-                    messages += [('New directory created: ' + curr_path, INFO)]
+                    messages += [('New directory created: ' + curr_path, 'INFO')]
                     self.log(messages[-1][0], messages[-1][1])
 
                 if type(curr[lbl_format]) is dict:
@@ -345,16 +338,16 @@ class ProjectHelper():
     def moveFilesFromExportDir(self, export_dir, destination_dir, only_directories):
         messages = []
         if not exists(export_dir):
-            messages += [('Export directory does not exist!', ERROR)]
+            messages += [('Export directory does not exist!', 'ERROR')]
             self.log(messages[-1][0], messages[-1][1])
         if not exists(destination_dir):
-            messages += [('Destination directory does not exist!', ERROR)]
+            messages += [('Destination directory does not exist!', 'ERROR')]
             self.log(messages[-1][0], messages[-1][1])
         if len(messages):
             return messages
 
-        self.log('Export directory: %s' % export_dir, INFO)
-        self.log('Destination directory: %s' % destination_dir, INFO)
+        self.log('Export directory: %s' % export_dir, 'INFO')
+        self.log('Destination directory: %s' % destination_dir, 'INFO')
 
         # Get all files that need to be moved
         export_files = sorted(glob(export_dir + '/*'), key=lambda x: -len(x))
@@ -365,7 +358,7 @@ class ProjectHelper():
             export_filenames += [export_filename]
             parsed_data = self.parseFilename(export_filename)
             if parsed_data is None:
-                messages += [('Could not parse filename ' + export_filename, ERROR)]
+                messages += [('Could not parse filename ' + export_filename, 'ERROR')]
                 self.log(messages[-1][0], messages[-1][1])
                 continue
 
@@ -383,7 +376,7 @@ class ProjectHelper():
                     curr_path = f"{p}/{lbl_format.format(**parsed_data)}"
                     if not exists(curr_path):
                         mkdir(curr_path)
-                        messages += [('New directory created: ' + curr_path, INFO)]
+                        messages += [('New directory created: ' + curr_path, 'INFO')]
                         self.log(messages[-1][0], messages[-1][1])
 
                     if type(curr[lbl_format]) is dict:
@@ -399,7 +392,7 @@ class ProjectHelper():
                                 continue
 
             if path is None:
-                messages += [(f"Can't find a project for file {export_file}!", WARN)]
+                messages += [(f"Can't find a project for file {export_file}!", 'WARN')]
                 continue
 
             overwrite_file = None
@@ -413,20 +406,20 @@ class ProjectHelper():
                     # Try to move file or print message
                     if not exists(path):
                         rename(export_file, path)
-                        messages += [(f"File {export_filename} moved to {path}", INFO)]
+                        messages += [(f"File {export_filename} moved to {path}", 'INFO')]
                         self.log(messages[-1][0], messages[-1][1])
                         break
                     elif exists(path) and overwrite_file == qm.Yes:
                         replace(export_file, path)
-                        messages += [(f"File {export_filename} overwrited {path}", INFO)]
+                        messages += [(f"File {export_filename} overwrited {path}", 'INFO')]
                         self.log(messages[-1][0], messages[-1][1])
                         break
                     else:
-                        messages += [(f"File {export_filename} was not moved!", ERROR)]
+                        messages += [(f"File {export_filename} was not moved!", 'ERROR')]
                         self.log(messages[-1][0], messages[-1][1])
                         break
                 except Exception as e:
-                    self.log(str(e), ERROR)
+                    self.log(str(e), 'ERROR')
                     qm = QMessageBox()
                     try_again = qm.question(self.app, '', f"Error with moving file: {path}!\nWould you like to try again?", qm.Yes | qm.No)
                     if try_again == qm.No:
